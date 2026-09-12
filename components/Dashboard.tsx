@@ -37,6 +37,7 @@ interface DashboardProps {
   onUpdateCompanyTests: (companyId: string, tests: TestDefinition[]) => void;
   onLoadDemo: () => void;
   onNavigate?: (tab: string) => void; // modül bağlantıları (ör. yaklaşan taramalar → Taramalar)
+  onBack?: (fallback: string) => void; // uygulama içi geri — önceki sayfaya döner
   detailRecordId?: string; // #/dashboard/<record-id> alt rotasından gelen kayıt kimliği
 }
 
@@ -71,6 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onUpdateCompanyTests,
   onLoadDemo,
   onNavigate,
+  onBack,
   detailRecordId
 }) => {
   // Yarım kalan sonuç-giriş sihirbazı taslağı — yenilemede seçimler korunur
@@ -759,7 +761,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const navigateRecord = (record: PatientRecord | null) => {
       if (!record) {
           setLocalRecordId(null);
-          onNavigate?.('dashboard');
+          if (onBack) onBack('dashboard'); // gerçek geri — önceki sayfaya döner
+          else onNavigate?.('dashboard');
       } else if (onNavigate) {
           onNavigate(`dashboard/${record.id}`);
       } else {

@@ -27,7 +27,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => storageService.getCurrentUser());
 
   // URL tabanlı sayfa yönetimi (#/dashboard, #/companies, ...)
-  const { hash, navigate } = useHashRoute();
+  const { hash, navigate, goBack } = useHashRoute();
   const activeTab = resolveRoute(hash, currentUser?.role === 'super_admin');
 
   // Ayarlar alt sekmesi — #/settings/<tab> veya eski #/users, #/ai deep-link'leri
@@ -339,6 +339,7 @@ function App() {
           }}
           onLoadDemo={handleLoadDemoData}
           onNavigate={navigate}
+          onBack={goBack}
           detailRecordId={activeTab === 'dashboard' ? hash.split('/')[1] : undefined}
         />
       )}
@@ -351,6 +352,7 @@ function App() {
           onGoToDashboard={() => navigate('dashboard')}
           detailQuoteId={hash.startsWith('quotes/') ? hash.split('/')[1] : undefined}
           onNavigate={navigate}
+          onBack={goBack}
         />
       )}
       {activeTab === 'calendar' && <Calendar onGoToDashboard={() => navigate('dashboard')} />}

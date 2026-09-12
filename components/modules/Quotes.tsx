@@ -17,6 +17,7 @@ interface QuotesProps {
   onGoToDashboard?: () => void;
   detailQuoteId?: string;   // #/quotes/<id> alt rotasından gelen teklif kimliği
   onNavigate?: (route: string) => void;
+  onBack?: (fallback: string) => void; // uygulama içi geri — önceki sayfaya döner
 }
 
 const STATUS_META: Record<QuoteStatus, { label: string; badge: string; dot: string }> = {
@@ -403,7 +404,7 @@ const QuoteDocument: React.FC<{ quote: Pick<Quote, 'quoteNumber' | 'title' | 'co
   );
 };
 
-export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashboard, detailQuoteId, onNavigate }) => {
+export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashboard, detailQuoteId, onNavigate, onBack }) => {
   const [quotes, setQuotes] = useState<Quote[]>(() => storageService.getQuotes());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | QuoteStatus | 'expired'>('all');
@@ -784,6 +785,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     }
     storageService.clearQuoteDraft(); // taslak artık kaydedildi — temizle
     setDraftRestored(false);
+    setView('list'); // arka planda sihirbaz kalmasın — geri dönüldüğünde liste görünür
     openDetail(saved); // kaydedilen teklifin detay sayfasını aç (URL: #/quotes/<id>)
   };
 
@@ -794,10 +796,11 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     else setLocalDetailId(quote.id);
   };
 
-  /** Detaydan listeye dön */
+  /** Detaydan geri dön — önceki sayfaya (genelde liste) gider, yoksa listeye düşer */
   const closeDetail = () => {
     setLocalDetailId(null);
-    onNavigate?.('quotes');
+    if (onBack) onBack('quotes');
+    else onNavigate?.('quotes');
   };
 
   const setStatus = (id: string, status: QuoteStatus) => {
