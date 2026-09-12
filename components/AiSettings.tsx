@@ -207,19 +207,19 @@ export const AiSettings: React.FC<AiSettingsProps> = ({ addNotification }) => {
                         onClick={() => handleProviderChange('local')}
                         className={`relative flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all text-center group ${
                             provider === 'local'
-                            ? 'border-emerald-500 bg-emerald-50/50 shadow-md shadow-emerald-100'
+                            ? 'border-blue-500 bg-blue-50/50 shadow-md shadow-blue-100'
                             : 'border-slate-200 bg-slate-50/30 hover:border-slate-300'
                         }`}
                     >
-                        <div className={`p-3 rounded-xl ${provider === 'local' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
+                        <div className={`p-3 rounded-xl ${provider === 'local' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400'}`}>
                             <HardDrive size={28} />
                         </div>
                         <div>
-                            <p className={`font-bold text-sm ${provider === 'local' ? 'text-emerald-700' : 'text-slate-700'}`}>Yerel Sistem</p>
+                            <p className={`font-bold text-sm ${provider === 'local' ? 'text-blue-700' : 'text-slate-700'}`}>Yerel Sistem</p>
                             <p className="text-[11px] text-slate-400 mt-1">Kural tabanlı çıkarma. API key yok, rate limit yok, anında.</p>
                         </div>
                         {provider === 'local' && (
-                            <div className="absolute top-3 right-3 w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center text-white">
+                            <div className="absolute top-3 right-3 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white">
                                 <Check size={14} />
                             </div>
                         )}
@@ -416,7 +416,7 @@ export const AiSettings: React.FC<AiSettingsProps> = ({ addNotification }) => {
                                                     className="flex-1 px-3 py-1.5 text-sm border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-100"
                                                 />
                                                 <div className="flex gap-1">
-                                                    <button onClick={handleSaveEdit} className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"><Check size={15} /></button>
+                                                    <button onClick={handleSaveEdit} className="p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"><Check size={15} /></button>
                                                     <button onClick={() => setEditingId(null)} className="p-1.5 bg-slate-200 text-slate-500 rounded-lg hover:bg-slate-300 transition-colors"><X size={15} /></button>
                                                 </div>
                                             </div>
@@ -503,7 +503,7 @@ export const AiSettings: React.FC<AiSettingsProps> = ({ addNotification }) => {
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div className="p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
                     <div>
-                        <h3 className="font-bold text-slate-800 flex items-center gap-2"><Zap size={18} className="text-emerald-500" /> Bağlantı Testi</h3>
+                        <h3 className="font-bold text-slate-800 flex items-center gap-2"><Zap size={18} className="text-blue-500" /> Bağlantı Testi</h3>
                         <p className="text-xs text-slate-400 mt-1">Mevcut anahtar ve model ile Gemini'ye küçük bir istek gönderir.</p>
                     </div>
                     <button

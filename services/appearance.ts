@@ -105,6 +105,38 @@ const buildAccentCss = (accent: AccentColor): string => {
   ${s} .shadow-blue-100\\/50 { --tw-shadow-color:${p['100']}80; }
   ${s} .shadow-blue-200\\/50 { --tw-shadow-color:${p['200']}80; }
   ${s} .shadow-blue-300\\/50 { --tw-shadow-color:${p['300']}80; }
+  /* hover / focus / grup varyantları — akcent sistemine bağlı aksiyonlar */
+  ${s} .bg-blue-50\\/30 { background-color:${p['50']}4d; }
+  ${s} .bg-blue-50\\/40 { background-color:${p['50']}66; }
+  ${s} .bg-blue-50\\/50 { background-color:${p['50']}80; }
+  ${s} .bg-blue-50\\/60 { background-color:${p['50']}99; }
+  ${s} .text-blue-800 { color:${p['700']}; }
+  ${s} .border-blue-500 { border-color:${p['500']}; }
+  ${s} .border-blue-600 { border-color:${p['600']}; }
+  ${s} .ring-blue-200 { --tw-ring-color:${p['200']}; }
+  ${s} .hover\\:bg-blue-50:hover { background-color:${p['50']}; }
+  ${s} .hover\\:bg-blue-50\\/30:hover { background-color:${p['50']}4d; }
+  ${s} .hover\\:bg-blue-50\\/60:hover { background-color:${p['50']}99; }
+  ${s} .hover\\:bg-blue-100:hover { background-color:${p['100']}; }
+  ${s} .hover\\:bg-blue-600:hover { background-color:${p['600']}; }
+  ${s} .hover\\:bg-blue-700:hover { background-color:${p['700']}; }
+  ${s} .hover\\:text-blue-600:hover { color:${p['600']}; }
+  ${s} .hover\\:text-blue-700:hover { color:${p['700']}; }
+  ${s} .hover\\:text-blue-800:hover { color:${p['700']}; }
+  ${s} .hover\\:border-blue-300:hover { border-color:${p['300']}; }
+  ${s} .hover\\:border-blue-400:hover { border-color:${p['400']}; }
+  ${s} .focus\\:border-blue-400:focus { border-color:${p['400']}; }
+  ${s} .focus\\:ring-blue-100:focus { --tw-ring-color:${p['100']}; }
+  ${s} .group:hover .group-hover\\:text-blue-500 { color:${p['500']}; }
+  ${s} .group:hover .group-hover\\:text-blue-600 { color:${p['600']}; }
+  ${s} .group:hover .group-hover\\:text-blue-700 { color:${p['700']}; }
+  ${s} .group:hover .group-hover\\:bg-blue-50 { background-color:${p['50']}; }
+  ${s} .group:focus-within .group-focus-within\\:text-blue-500 { color:${p['500']}; }
+  ${s} .from-blue-400 { --tw-gradient-from:${p['400']} var(--tw-gradient-from-position); --tw-gradient-to:${p['400']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
+  ${s} .to-blue-500 { --tw-gradient-to:${p['500']} var(--tw-gradient-to-position); }
+  ${s} .to-blue-600 { --tw-gradient-to:${p['600']} var(--tw-gradient-to-position); }
+  ${s} .hover\\:from-blue-600:hover { --tw-gradient-from:${p['600']} var(--tw-gradient-from-position); --tw-gradient-to:${p['600']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
+  ${s} .hover\\:to-blue-700:hover { --tw-gradient-to:${p['700']} var(--tw-gradient-to-position); }
 `;
 };
 

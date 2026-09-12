@@ -17,10 +17,10 @@ const EyePartBadge: React.FC<{ text: string }> = ({ text }) => {
   let icon = null;
 
   if (includesTr(text, "gece çalışabilir")) {
-    style = "bg-green-100 text-green-700 border-green-200";
+    style = "bg-emerald-100 text-emerald-700 border-emerald-200";
     icon = <Moon size={10} />;
   } else if (includesTr(text, "renk körlüğü yok")) {
-    style = "bg-green-100 text-green-700 border-green-200";
+    style = "bg-emerald-100 text-emerald-700 border-emerald-200";
     icon = <Eye size={10} />;
   } else if (includesTr(text, "renk körlüğü var")) {
     style = "bg-red-100 text-red-700 font-bold border-red-200";
@@ -64,7 +64,7 @@ export const ResultValue: React.FC<ResultValueProps> = ({ test, res, status, isR
 
     if (res.value.includes("Tetanoz aşısı yapılmıştır")) {
       return (
-        <span className="font-bold text-[10px] py-1 px-2 rounded-full bg-green-100 text-green-700 border border-green-200 shadow-sm flex items-center justify-center gap-1">
+        <span className="font-bold text-[10px] py-1 px-2 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm flex items-center justify-center gap-1">
           <Syringe size={10} />{res.value}
         </span>
       );
@@ -77,10 +77,10 @@ export const ResultValue: React.FC<ResultValueProps> = ({ test, res, status, isR
     if (test.key.includes('_kart')) {
       if (test.key.includes('anti_hbs_kart')) {
         badgeClass = includesTr(res.value, 'pozitif')
-          ? "bg-green-100 text-green-700 border border-green-200 font-bold"
+          ? "bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold"
           : "text-slate-400 bg-slate-100";
       } else if (includesTr(res.value, 'negatif')) {
-        badgeClass = "bg-green-100 text-green-700 border border-green-200 font-bold";
+        badgeClass = "bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold";
       } else if (includesTr(res.value, 'pozitif')) {
         badgeClass = "bg-red-100 text-red-700 border border-red-200 font-bold";
       }

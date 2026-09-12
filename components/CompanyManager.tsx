@@ -214,7 +214,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
       const items: { key: string; date: string; text: string; sub: string; chip: string }[] = [
           ...companyScreenings.map(s => ({
               key: `scr-${s.id}`, date: s.date, text: s.title,
-              sub: `Tarama · ${SCR_STATUS[s.status].label}`, chip: 'bg-blue-50 text-blue-600'
+              sub: `Tarama · ${SCR_STATUS[s.status].label}`, chip: 'bg-emerald-50 text-emerald-600'
           })),
           ...companyQuotes.map(q => ({
               key: `quo-${q.id}`, date: q.createdAt, text: q.quoteNumber,
@@ -331,7 +331,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
               <ArrowLeft size={15} /> Firmalara Dön
             </button>
             <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={() => onNavigate?.('quotes')} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700 rounded-xl transition-colors">
+              <button onClick={() => onNavigate?.('quotes')} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
                 <FileText size={13} /> Yeni Teklif
               </button>
               <button onClick={() => onNavigate?.('screenings')} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
@@ -349,7 +349,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
           {/* ── Firma Kartı ── */}
           <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
             <div className="absolute -right-16 -top-16 w-56 h-56 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-            <div className="absolute -left-10 -bottom-20 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -left-10 -bottom-20 w-48 h-48 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
             <div className="relative flex flex-col lg:flex-row lg:items-center gap-5">
               <div className="flex items-center gap-4 flex-1 min-w-0">
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-lg shrink-0 ${hazard?.avatar ?? 'bg-blue-600'}`}>
@@ -413,7 +413,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
                     active ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                   }`}
                 >
-                  <t.icon size={14} className={active ? 'text-emerald-400' : 'text-slate-400'} />
+                  <t.icon size={14} className={active ? 'text-blue-400' : 'text-slate-400'} />
                   {t.label}
                   {t.count !== undefined && t.count > 0 && (
                     <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black tabular-nums ${active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500'}`}>
@@ -601,7 +601,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
                   <FileText size={28} className="mx-auto text-slate-200 mb-3" />
                   <p className="text-sm font-bold text-slate-600">Teklif yok</p>
                   <p className="text-xs text-slate-400 mt-1">Bu firmaya hazırlanmış teklif bulunmuyor.</p>
-                  <button onClick={() => onNavigate?.('quotes')} className="mt-4 px-4 py-2 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">Teklif Oluştur</button>
+                  <button onClick={() => onNavigate?.('quotes')} className="mt-4 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">Teklif Oluştur</button>
                 </div>
               ) : (
                 <div className="divide-y divide-slate-50">
@@ -622,7 +622,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
                           </p>
                         </div>
                         <span className="text-sm font-black text-slate-800 tabular-nums shrink-0">{fmtMoney(quoteTotal(q))}</span>
-                        <ChevronRight size={16} className="text-slate-300 group-hover:text-emerald-500 transition-colors shrink-0" />
+                        <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 transition-colors shrink-0" />
                       </button>
                     );
                   })}
@@ -762,7 +762,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
           <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.cokTehlikeli}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Çok Tehlikeli</p></div>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
+          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
           <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.records}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Tarama Kaydı</p></div>
         </div>
       </div>
@@ -954,7 +954,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
 
               {/* İletişim */}
               <section>
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Phone size={13} className="text-emerald-500"/> İletişim</h4>
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2"><Phone size={13} className="text-blue-500"/> İletişim</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Yetkili Kişi</label>

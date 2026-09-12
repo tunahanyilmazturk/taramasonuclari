@@ -278,7 +278,7 @@ export const DashboardModals: React.FC<DashboardModalsProps> = ({
 
               <div className="flex items-center gap-3">
                 {savedCountInSession > 0 && (
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+                  <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full flex items-center gap-1">
                     <CheckCircle2 size={13} className="text-emerald-600" />
                     {savedCountInSession} hasta eklendi
                   </span>
@@ -309,7 +309,7 @@ export const DashboardModals: React.FC<DashboardModalsProps> = ({
                   isPdfProcessing
                     ? 'border-indigo-300 bg-indigo-50/50'
                     : pdfStatus === 'success'
-                      ? 'border-green-300 bg-green-50/50'
+                      ? 'border-emerald-300 bg-emerald-50/50'
                       : pdfStatus === 'error'
                         ? 'border-red-300 bg-red-50/50'
                         : 'border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30'
@@ -333,8 +333,8 @@ export const DashboardModals: React.FC<DashboardModalsProps> = ({
                   </div>
                 ) : pdfStatus === 'success' ? (
                   <div className="flex items-center justify-center gap-2">
-                    <CheckCircle2 size={20} className="text-green-500" />
-                    <span className="text-sm font-bold text-green-600">Değerler başarıyla dolduruldu! Kontrol edip kaydedin.</span>
+                    <CheckCircle2 size={20} className="text-emerald-500" />
+                    <span className="text-sm font-bold text-emerald-600">Değerler başarıyla dolduruldu! Kontrol edip kaydedin.</span>
                   </div>
                 ) : pdfStatus === 'error' ? (
                   <div className="flex items-center justify-center gap-2">
@@ -354,10 +354,10 @@ export const DashboardModals: React.FC<DashboardModalsProps> = ({
 
               {/* PDF Çıkarım Raporu — hangi testler bulundu/bulunamadı */}
               {extractionReport && pdfStatus === 'success' && (
-                <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 space-y-2 animate-in slide-in-from-top-2">
+                <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 space-y-2 animate-in slide-in-from-top-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-                    <span className="text-xs font-bold text-emerald-700">
+                    <span className="text-xs font-bold text-blue-700">
                       {extractionReport.foundCount}/{extractionReport.totalTests} test başarıyla okundu
                     </span>
                     {extractionReport.foundCount === extractionReport.totalTests && (

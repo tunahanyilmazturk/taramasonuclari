@@ -212,7 +212,7 @@ const quoteTypeLabel = (t?: QuoteType) => QUOTE_TYPES.find(x => x.key === t)?.la
 /** Sihirbaz adım başlığı — tüm adımlarda aynı kompakt görünüm */
 const StepHeader: React.FC<{ icon: React.ElementType; title: string; desc: React.ReactNode }> = ({ icon: Icon, title, desc }) => (
   <div className="flex items-center gap-3">
-    <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm">
+    <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 shadow-sm">
       <Icon size={17} />
     </div>
     <div className="min-w-0">
@@ -227,7 +227,7 @@ const Panel: React.FC<{ icon?: React.ElementType; title: string; right?: React.R
   <div className={`bg-white border border-slate-200 rounded-2xl ${overflowVisible ? 'overflow-visible' : 'overflow-hidden'} ${className}`}>
     <div className="px-4 py-3 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between gap-3 rounded-t-2xl">
       <h3 className="text-xs font-black text-slate-600 uppercase tracking-wide flex items-center gap-2">
-        {Icon && <Icon size={14} className="text-emerald-600" />}
+        {Icon && <Icon size={14} className="text-blue-600" />}
         {title}
       </h3>
       {right}
@@ -877,7 +877,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     return [...map.entries()].sort(([a], [b]) => order(a) - order(b) || a.localeCompare(b, 'tr'));
   }, [filteredPoolTests]);
 
-  const inputCls = "w-full text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none p-2.5 transition-all placeholder-slate-400";
+  const inputCls = "w-full text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none p-2.5 transition-all placeholder-slate-400";
   const labelCls = "block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide";
 
   return (
@@ -890,13 +890,13 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2.5">
-                <FileText size={24} className="text-emerald-600" /> Teklifler
+                <FileText size={24} className="text-blue-600" /> Teklifler
               </h1>
               <p className="text-xs text-slate-500 mt-1">Firmalara test paketi bazlı fiyat teklifi hazırlayın ve onay sürecini takip edin</p>
             </div>
             <button
               onClick={openCreate}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-emerald-200 active:scale-95 shrink-0"
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200 active:scale-95 shrink-0"
             >
               <Plus size={16} /> Yeni Teklif
             </button>
@@ -904,8 +904,8 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
 
           {/* Özet Kartlar — tıklanabilir filtre */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <button onClick={() => setStatusFilter('all')} className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${statusFilter === 'all' ? 'border-emerald-300 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-emerald-200'}`}>
-              <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
+            <button onClick={() => setStatusFilter('all')} className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${statusFilter === 'all' ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-200'}`}>
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
               <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.total}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Toplam Teklif</p></div>
             </button>
             <button onClick={() => setStatusFilter(f => f === 'taslak' ? 'all' : 'taslak')} className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${statusFilter === 'taslak' ? 'border-slate-400 ring-2 ring-slate-200' : 'border-slate-200 hover:border-slate-300'}`}>
@@ -917,7 +917,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
               <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.gonderildi}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bekleyen Yanıt</p><p className="text-[9px] font-bold text-blue-500 tabular-nums">₺{fmtTL(stats.bekleyenTutar)}</p></div>
             </button>
             <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0"><Calculator size={18}/></div>
+              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><Calculator size={18}/></div>
               <div><p className="text-xl font-black text-emerald-600 tabular-nums">₺{fmtTL(stats.onayliTutar)}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Onaylı Tutar</p></div>
             </div>
           </div>
@@ -937,20 +937,20 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
           {/* Arama & Filtreler */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 group">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" size={16} />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
               <input
                 type="text"
                 placeholder="Teklif no, firma, başlık veya not ara..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all shadow-sm"
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all shadow-sm"
               />
             </div>
             <div className="flex items-center gap-2">
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value as 'all' | QuoteType)}
-                className="text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 text-slate-600 shadow-sm cursor-pointer"
+                className="text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 text-slate-600 shadow-sm cursor-pointer"
               >
                 <option value="all">Tüm Türler</option>
                 <option value="ise_giris">İşe Giriş</option>
@@ -959,7 +959,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 text-slate-600 shadow-sm cursor-pointer"
+                className="text-xs font-bold bg-white border border-slate-200 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 text-slate-600 shadow-sm cursor-pointer"
               >
                 <option value="new">En Yeni</option>
                 <option value="amount_desc">Tutar (Yüksek)</option>
@@ -1006,7 +1006,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                   : 'Arama veya filtre kriterlerini değiştirmeyi deneyin.'}
               </p>
               {quotes.length === 0 && (
-                <button onClick={openCreate} className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-emerald-200">
+                <button onClick={openCreate} className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200">
                   <Plus size={16} /> Teklif Oluştur
                 </button>
               )}
@@ -1032,7 +1032,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       const t = calcTotals(quote.items, quote.discountRate, quote.vatRate, quote.discountType ?? 'percent');
                       const expired = isExpired(quote);
                       return (
-                        <tr key={quote.id} onClick={() => openDetail(quote)} className="hover:bg-emerald-50/30 cursor-pointer transition-colors">
+                        <tr key={quote.id} onClick={() => openDetail(quote)} className="hover:bg-blue-50/30 cursor-pointer transition-colors">
                           <td className="px-5 py-3.5"><p className="font-bold text-slate-800 text-xs font-mono">{quote.quoteNumber}</p></td>
                           <td className="px-4 py-3.5">
                             <p className="font-bold text-slate-700 text-xs">{comp?.name || '—'}</p>
@@ -1072,7 +1072,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                               {(quote.status === 'onaylandi' || quote.status === 'reddedildi') && (
                                 <button onClick={() => setStatus(quote.id, 'taslak')} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Taslağa döndür"><RotateCcw size={14}/></button>
                               )}
-                              <button onClick={() => openDetail(quote)} className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Detay / Yazdır"><Eye size={14}/></button>
+                              <button onClick={() => openDetail(quote)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detay / Yazdır"><Eye size={14}/></button>
                               <button onClick={() => openEdit(quote)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Düzenle"><Edit2 size={14}/></button>
                               <button onClick={() => setConfirmClone(quote)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Kopyala"><Copy size={14}/></button>
                               <button onClick={() => setConfirmDelete(quote.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Sil"><Trash2 size={14}/></button>
@@ -1095,7 +1095,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
 
           {/* ── SOL SIDEBAR: ADIMLAR ── */}
           <aside className="w-full lg:w-72 shrink-0 lg:sticky lg:top-24 space-y-4">
-            <button onClick={closeWizard} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-600 transition-colors">
+            <button onClick={closeWizard} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors">
               <ArrowLeft size={14} /> Tekliflere Dön
             </button>
 
@@ -1117,19 +1117,19 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                     onClick={() => goToStep(step.key)}
                     className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all min-w-[140px] lg:min-w-0 lg:w-full ${
                       isActive
-                        ? 'border-emerald-500 bg-emerald-50/60 ring-1 ring-emerald-200 shadow-sm'
+                        ? 'border-blue-500 bg-blue-50/60 ring-1 ring-blue-200 shadow-sm'
                         : done
-                          ? 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30'
+                          ? 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/30'
                           : 'border-transparent bg-slate-50/50 hover:bg-slate-100'
                     }`}
                   >
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                      isActive ? 'bg-emerald-600 text-white' : done ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-200 text-slate-400'
+                      isActive ? 'bg-blue-600 text-white' : done ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-400'
                     }`}>
                       {done && !isActive ? <Check size={15}/> : <step.icon size={15}/>}
                     </div>
                     <div className="min-w-0">
-                      <p className={`text-xs font-bold truncate ${isActive ? 'text-emerald-800' : done ? 'text-slate-700' : 'text-slate-500'}`}>
+                      <p className={`text-xs font-bold truncate ${isActive ? 'text-blue-800' : done ? 'text-slate-700' : 'text-slate-500'}`}>
                         {step.key}. {step.label}
                       </p>
                       <p className="text-[10px] text-slate-400 truncate hidden sm:block">{step.desc}</p>
@@ -1141,11 +1141,11 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
 
             {/* Canlı özet kartı */}
             <div className="hidden lg:block bg-slate-800 text-white rounded-2xl p-4 space-y-2.5">
-              <p className="font-mono text-[11px] font-bold text-emerald-400">{form.quoteNumber}</p>
+              <p className="font-mono text-[11px] font-bold text-blue-400">{form.quoteNumber}</p>
               <div className="text-xs space-y-1.5">
                 <div className="flex justify-between text-slate-300"><span>Firma</span><span className="font-bold text-white truncate max-w-[140px]">{formCompany?.name || '—'}</span></div>
                 <div className="flex justify-between text-slate-300"><span>Kalem</span><span className="font-bold text-white">{form.items.length}</span></div>
-                <div className="flex justify-between text-slate-300 pt-1.5 border-t border-slate-600"><span>Toplam</span><span className="font-black text-emerald-400 tabular-nums">₺{fmtTL(formTotals?.total ?? 0)}</span></div>
+                <div className="flex justify-between text-slate-300 pt-1.5 border-t border-slate-600"><span>Toplam</span><span className="font-black text-blue-400 tabular-nums">₺{fmtTL(formTotals?.total ?? 0)}</span></div>
               </div>
             </div>
           </aside>
@@ -1170,10 +1170,10 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                   <button
                     onClick={() => setCompanyMenuOpen(true)}
                     className={`w-full flex items-center gap-3 border-2 rounded-2xl px-4 py-3.5 text-left transition-all shadow-sm ${
-                      formCompany ? 'border-emerald-500 bg-emerald-50/40 ring-1 ring-emerald-200' : 'border-slate-200 bg-white hover:border-emerald-400'
+                      formCompany ? 'border-blue-500 bg-blue-50/40 ring-1 ring-blue-200' : 'border-slate-200 bg-white hover:border-blue-400'
                     }`}
                   >
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${formCompany ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black shrink-0 ${formCompany ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
                       {formCompany ? formCompany.name.substring(0, 2).toUpperCase() : <Building2 size={18}/>}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1193,7 +1193,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 {/* Seçili firma profil kartı */}
                 {formCompany && (
                   <div className="mt-3 bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="w-12 h-12 bg-emerald-600 text-white rounded-xl flex items-center justify-center text-sm font-black shrink-0">
+                    <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center text-sm font-black shrink-0">
                       {formCompany.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1 grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1233,14 +1233,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                           key={t.key}
                           onClick={() => patchForm({ quoteType: t.key })}
                           className={`p-3.5 rounded-xl border-2 text-left transition-all ${
-                            isSelected ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-200' : 'border-slate-200 bg-white hover:border-slate-300'
+                            isSelected ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-200' : 'border-slate-200 bg-white hover:border-slate-300'
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-emerald-600' : 'border-slate-300'}`}>
-                              {isSelected && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-blue-600' : 'border-slate-300'}`}>
+                              {isSelected && <div className="w-2 h-2 rounded-full bg-blue-600" />}
                             </div>
-                            <span className={`text-sm font-bold ${isSelected ? 'text-emerald-800' : 'text-slate-700'}`}>{t.label}</span>
+                            <span className={`text-sm font-bold ${isSelected ? 'text-blue-800' : 'text-slate-700'}`}>{t.label}</span>
                           </div>
                           <p className="text-[10px] text-slate-400 mt-1 ml-6">{t.desc}</p>
                         </button>
@@ -1268,7 +1268,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                             <button
                               key={days}
                               onClick={() => patchForm({ validUntil: d })}
-                              className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg border transition-colors ${active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-700'}`}
+                              className={`px-2.5 py-1.5 text-[10px] font-bold rounded-lg border transition-colors ${active ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-700'}`}
                             >
                               {days} Gün
                             </button>
@@ -1302,7 +1302,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                     />
                     <button
                       onClick={() => setForm(prev => prev && ({ ...prev, titleEdited: false, title: buildQuoteTitle(formCompany?.name, prev.quoteType, prev.validUntil) }))}
-                      className="p-2.5 shrink-0 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl transition-colors"
+                      className="p-2.5 shrink-0 text-slate-400 hover:text-blue-600 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl transition-colors"
                       title="Başlığı firma + tür + tarihe göre otomatik yeniden üret"
                     >
                       <RotateCcw size={14}/>
@@ -1320,7 +1320,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
           {/* ── ADIM 2: KALEM SEÇİMİ ── */}
           {wizardStep === 2 && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <StepHeader icon={FlaskConical} title="Teklif Kalemleri" desc={<><span className="font-bold text-emerald-600">{formCompany?.name}</span> için test havuzundan tetkik seçin</>} />
+              <StepHeader icon={FlaskConical} title="Teklif Kalemleri" desc={<><span className="font-bold text-blue-600">{formCompany?.name}</span> için test havuzundan tetkik seçin</>} />
               <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
                 {/* ── SOL: TEST HAVUZU ── */}
                 <Panel icon={FlaskConical} title="Test Havuzu" bodyClassName="p-0 flex flex-col" right={
@@ -1332,7 +1332,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         placeholder="Tetkik ara..."
                         value={itemSearch}
                         onChange={(e) => setItemSearch(e.target.value)}
-                        className="w-full pl-7 pr-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all"
+                        className="w-full pl-7 pr-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
                       />
                     </div>
                     <span className="text-[10px] font-bold text-slate-400 shrink-0">{allTests.length} test</span>
@@ -1344,7 +1344,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       <>
                         <button
                           onClick={applyCompanyTemplate}
-                          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
+                          className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
                           title="Firmanın kayıtlı test şablonunu toplu ekler"
                         >
                           <Building2 size={11}/> Firma Şablonunu Uygula ({formCompany.tests.length})
@@ -1362,7 +1362,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       <button
                         key={cat}
                         onClick={() => setCategoryFilter(categoryFilter === cat ? 'all' : cat)}
-                        className={`shrink-0 px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors ${categoryFilter === cat ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
+                        className={`shrink-0 px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-colors ${categoryFilter === cat ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'}`}
                       >
                         {cat}
                       </button>
@@ -1379,7 +1379,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                               <span className="text-[9px] font-bold text-slate-400">{tests.length} test</span>
                               <button
                                 onClick={() => mergeAddTests(tests)}
-                                className="text-[9px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
+                                className="text-[9px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
                               >
                                 + Tümünü Ekle
                               </button>
@@ -1392,7 +1392,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                                 <button
                                   key={test.id}
                                   onClick={() => toggleTestItem(test)}
-                                  className="w-full flex items-center gap-2.5 px-4 py-3 text-left transition-colors text-sm text-slate-600 hover:bg-emerald-50/60 hover:text-emerald-800"
+                                  className="w-full flex items-center gap-2.5 px-4 py-3 text-left transition-colors text-sm text-slate-600 hover:bg-blue-50/60 hover:text-blue-800"
                                 >
                                   <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 bg-slate-200 text-slate-400">
                                     <Plus size={12} />
@@ -1433,7 +1433,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                           Temizle
                         </button>
                       )}
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-0.5">{form.items.length} kalem</span>
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">{form.items.length} kalem</span>
                     </div>
                   </div>
 
@@ -1444,13 +1444,13 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       type="number" min={1}
                       value={bulkQty}
                       onChange={(e) => setBulkQty(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-16 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none px-2 py-1.5 text-center transition-all"
+                      className="w-16 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none px-2 py-1.5 text-center transition-all"
                       placeholder="Kişi"
                     />
                     <button
                       onClick={() => typeof bulkQty === 'number' && applyBulkQty(bulkQty)}
                       disabled={bulkQty === '' || form.items.length === 0}
-                      className="px-3 py-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="px-3 py-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Uygula
                     </button>
@@ -1471,7 +1471,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         <ClipboardList size={28} className="mx-auto text-slate-300 mb-2" />
                         <p className="text-sm text-slate-400 font-medium">Henüz kalem seçilmedi</p>
                         <p className="text-[11px] text-slate-400 mt-1">Soldan tetkik seçin veya özel kalem ekleyin</p>
-                        <button onClick={addCustomItem} className="mt-3 px-4 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors">
+                        <button onClick={addCustomItem} className="mt-3 px-4 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors">
                           Özel Kalem Ekle
                         </button>
                       </div>
@@ -1506,7 +1506,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                                   type="text"
                                   value={item.name}
                                   onChange={(e) => updateItem(item.id, { name: e.target.value })}
-                                  className="w-full text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none px-2 py-1.5 transition-all font-medium"
+                                  className="w-full text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none px-2 py-1.5 transition-all font-medium"
                                   placeholder="Hizmet / test adı"
                                 />
                               )}
@@ -1520,14 +1520,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                               type="number" min={1}
                               value={item.quantity}
                               onChange={(e) => updateItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                              className="w-16 shrink-0 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none px-2 py-1.5 text-center transition-all"
+                              className="w-16 shrink-0 text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none px-2 py-1.5 text-center transition-all"
                               title="Kişi / Adet"
                             />
                             <button onClick={() => removeItem(item.id)} className="p-1.5 shrink-0 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><X size={14}/></button>
                           </div>
                         ))}
                         <div className="px-4 py-2.5 bg-slate-50/40">
-                          <button onClick={addCustomItem} className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition-colors">
+                          <button onClick={addCustomItem} className="text-[11px] font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1 transition-colors">
                             <Plus size={12}/> Özel Kalem Ekle
                           </button>
                         </div>
@@ -1559,7 +1559,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
               <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
                 {/* Kalem fiyat tablosu */}
                 <Panel icon={ClipboardList} title="Kalemler & Birim Fiyatlar" className="lg:col-span-2" bodyClassName="p-3 space-y-2" right={
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-0.5">{form.items.length} kalem</span>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">{form.items.length} kalem</span>
                 }>
                   {/* Sıfır fiyat uyarısı + havuz fiyatına dön */}
                   {unpricedCount > 0 && (
@@ -1596,19 +1596,19 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                           type="text"
                           value={item.name}
                           onChange={(e) => updateItem(item.id, { name: e.target.value })}
-                          className="w-full text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none px-2.5 py-2 transition-all font-medium"
+                          className="w-full text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none px-2.5 py-2 transition-all font-medium"
                           placeholder="Hizmet / test adı"
                         />
                       </div>
                       <div className="col-span-4 sm:col-span-2">
                         <span className="sm:hidden block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-center">Miktar</span>
                         <input type="number" min={1} value={item.quantity} onChange={(e) => updateItem(item.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
-                          className="w-full text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none px-2.5 py-2 text-center transition-all" title="Kişi / Adet" />
+                          className="w-full text-xs border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none px-2.5 py-2 text-center transition-all" title="Kişi / Adet" />
                       </div>
                       <div className="col-span-4 sm:col-span-2">
                         <span className="sm:hidden block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 text-right">Birim Fiyat</span>
                         <input type="number" min={0} step={0.01} value={item.unitPrice || ''} onChange={(e) => updateItem(item.id, { unitPrice: Math.max(0, parseFloat(e.target.value) || 0) })}
-                          className={`w-full text-xs border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 outline-none px-2.5 py-2 text-right transition-all ${item.unitPrice <= 0 ? 'border-amber-300 focus:ring-amber-100 focus:border-amber-400' : 'border-slate-200 focus:ring-emerald-100 focus:border-emerald-400'}`} placeholder="Birim ₺" />
+                          className={`w-full text-xs border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 outline-none px-2.5 py-2 text-right transition-all ${item.unitPrice <= 0 ? 'border-amber-300 focus:ring-amber-100 focus:border-amber-400' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-400'}`} placeholder="Birim ₺" />
                       </div>
                       <div className="col-span-3 sm:col-span-2 text-right">
                         <span className="sm:hidden block text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tutar</span>
@@ -1619,7 +1619,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       </div>
                     </div>
                   ))}
-                  <button onClick={addCustomItem} className="w-full py-2.5 text-xs font-bold text-emerald-700 bg-emerald-50/60 hover:bg-emerald-100 border border-dashed border-emerald-300 rounded-xl transition-colors">
+                  <button onClick={addCustomItem} className="w-full py-2.5 text-xs font-bold text-blue-700 bg-blue-50/60 hover:bg-blue-100 border border-dashed border-blue-300 rounded-xl transition-colors">
                     + Özel Kalem Ekle
                   </button>
                 </Panel>
@@ -1665,7 +1665,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                           <button
                             key={v}
                             onClick={() => setForm(prev => prev && ({ ...prev, discountRate: v, discountType: 'percent' }))}
-                            className={`flex-1 py-1 text-[10px] font-bold rounded-md border transition-colors ${form.discountType === 'percent' && form.discountRate === v ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'}`}
+                            className={`flex-1 py-1 text-[10px] font-bold rounded-md border transition-colors ${form.discountType === 'percent' && form.discountRate === v ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}
                           >
                             %{v}
                           </button>
@@ -1694,7 +1694,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                           <button
                             key={v}
                             onClick={() => setForm(prev => prev && ({ ...prev, vatRate: v }))}
-                            className={`flex-1 py-1 text-[10px] font-bold rounded-md border transition-colors ${form.vatRate === v ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300'}`}
+                            className={`flex-1 py-1 text-[10px] font-bold rounded-md border transition-colors ${form.vatRate === v ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300'}`}
                           >
                             %{v}
                           </button>
@@ -1707,11 +1707,11 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                     <div className="flex justify-between text-slate-300"><span>Ara Toplam</span><span className="tabular-nums">₺{fmtTL(formTotals?.sub ?? 0)}</span></div>
                     <div className="flex justify-between text-slate-300"><span>İndirim</span><span className="tabular-nums text-red-300">-₺{fmtTL(formTotals?.discount ?? 0)}</span></div>
                     <div className="flex justify-between text-slate-300"><span>KDV</span><span className="tabular-nums">+₺{fmtTL(formTotals?.vat ?? 0)}</span></div>
-                    <div className="flex justify-between pt-1.5 border-t border-slate-600 font-black text-sm"><span>Genel Toplam</span><span className="tabular-nums text-emerald-400">₺{fmtTL(formTotals?.total ?? 0)}</span></div>
+                    <div className="flex justify-between pt-1.5 border-t border-slate-600 font-black text-sm"><span>Genel Toplam</span><span className="tabular-nums text-blue-400">₺{fmtTL(formTotals?.total ?? 0)}</span></div>
                     {formCompany?.employeeCount !== undefined && formCompany.employeeCount > 0 && (formTotals?.total ?? 0) > 0 && (
                       <div className="flex justify-between pt-1 border-t border-slate-700 text-slate-300">
                         <span>Kişi Başı <span className="text-[9px] text-slate-500">({formCompany.employeeCount} çalışan)</span></span>
-                        <span className="tabular-nums font-bold text-cyan-300">₺{fmtTL(Math.round((formTotals!.total / formCompany.employeeCount) * 100) / 100)}</span>
+                        <span className="tabular-nums font-bold text-blue-300">₺{fmtTL(Math.round((formTotals!.total / formCompany.employeeCount) * 100) / 100)}</span>
                       </div>
                     )}
                   </div>
@@ -1735,14 +1735,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         key={tpl.key}
                         onClick={() => selectCoverTemplate(tpl.key)}
                         className={`p-3.5 rounded-xl border-2 text-left transition-all ${
-                          isSelected ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-200' : 'border-slate-200 bg-white hover:border-slate-300'
+                          isSelected ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-200' : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-emerald-600' : 'border-slate-300'}`}>
-                            {isSelected && <div className="w-2 h-2 rounded-full bg-emerald-600" />}
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-blue-600' : 'border-slate-300'}`}>
+                            {isSelected && <div className="w-2 h-2 rounded-full bg-blue-600" />}
                           </div>
-                          <span className={`text-xs font-bold ${isSelected ? 'text-emerald-800' : 'text-slate-700'}`}>{tpl.label}</span>
+                          <span className={`text-xs font-bold ${isSelected ? 'text-blue-800' : 'text-slate-700'}`}>{tpl.label}</span>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-1 ml-6">{tpl.desc}</p>
                       </button>
@@ -1781,7 +1781,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         </button>
                         <button
                           onClick={() => setForm(prev => prev && ({ ...prev, coverLetterEdited: false, coverLetter: buildCoverLetter(prev, prev.coverTemplate) }))}
-                          className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition-colors"
+                          className="text-[10px] font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1 transition-colors"
                           title="Seçili şablonla yeniden üret"
                         >
                           <RotateCcw size={10}/> Yeniden Üret
@@ -1849,7 +1849,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       </h3>
                       <button
                         onClick={addRecommendedTerms}
-                        className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg px-2.5 py-1 transition-colors whitespace-nowrap"
+                        className="text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg px-2.5 py-1 transition-colors whitespace-nowrap"
                         title="Standart teklifler için önerilen maddeleri toplu ekler"
                       >
                         Önerilen Set (7)
@@ -1862,7 +1862,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         placeholder="Madde ara..."
                         value={termSearch}
                         onChange={(e) => setTermSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all"
+                        className="w-full pl-8 pr-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -1878,7 +1878,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                           <button
                             onClick={() => addTerms(pendingTexts)}
                             disabled={pendingTexts.length === 0}
-                            className="text-[9px] font-bold text-emerald-600 hover:text-emerald-700 disabled:text-slate-300 transition-colors"
+                            className="text-[9px] font-bold text-blue-600 hover:text-blue-700 disabled:text-slate-300 transition-colors"
                           >
                             {pendingTexts.length === 0 ? 'Tümü eklendi' : '+ Tümünü Ekle'}
                           </button>
@@ -1891,13 +1891,13 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                               <div key={ti} className="flex items-start gap-2.5 px-4 py-3">
                                 <div className="flex-1 min-w-0">
                                   <p className={`text-xs leading-relaxed ${alreadyAdded ? 'text-slate-300 line-through' : 'text-slate-600'}`}>{text}</p>
-                                  {term.rec && !alreadyAdded && <span className="inline-block mt-1 text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">ÖNERİLEN</span>}
+                                  {term.rec && !alreadyAdded && <span className="inline-block mt-1 text-[8px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5">ÖNERİLEN</span>}
                                 </div>
                                 <button
                                   onClick={() => !alreadyAdded && addTerm(text)}
                                   disabled={alreadyAdded}
                                   className={`shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-colors ${
-                                    alreadyAdded ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500 hover:bg-emerald-100 hover:text-emerald-700'
+                                    alreadyAdded ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-700'
                                   }`}
                                   title={alreadyAdded ? 'Zaten eklendi' : 'Maddeyi ekle'}
                                 >
@@ -1928,7 +1928,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                           Temizle
                         </button>
                       )}
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-0.5">{form.terms.length} madde</span>
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-2 py-0.5">{form.terms.length} madde</span>
                     </div>
                   </div>
 
@@ -1938,7 +1938,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         <ScrollText size={28} className="mx-auto text-slate-300 mb-2" />
                         <p className="text-sm text-slate-400 font-medium">Henüz madde eklenmedi</p>
                         <p className="text-[11px] text-slate-400 mt-1">Soldan madde seçin veya özel madde ekleyin</p>
-                        <button onClick={() => addTerm('')} className="mt-3 px-4 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors">
+                        <button onClick={() => addTerm('')} className="mt-3 px-4 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors">
                           Özel Madde Ekle
                         </button>
                       </div>
@@ -1955,14 +1955,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                               value={term}
                               onChange={(e) => updateTerm(idx, e.target.value)}
                               rows={2}
-                              className="flex-1 min-w-0 text-xs leading-relaxed border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none px-2.5 py-1.5 transition-all resize-y"
+                              className="flex-1 min-w-0 text-xs leading-relaxed border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none px-2.5 py-1.5 transition-all resize-y"
                               placeholder="Madde metni"
                             />
                             <button onClick={() => removeTerm(idx)} className="p-1.5 shrink-0 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors mt-0.5"><X size={14}/></button>
                           </div>
                         ))}
                         <div className="px-4 py-2.5 bg-slate-50/40">
-                          <button onClick={() => addTerm('')} className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 transition-colors">
+                          <button onClick={() => addTerm('')} className="text-[11px] font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1 transition-colors">
                             <Plus size={12}/> Özel Madde Ekle
                           </button>
                         </div>
@@ -2007,7 +2007,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         { ok: form.terms.some(t => t.trim()), label: 'Şart maddeleri eklendi', warn: true }
                       ] as const).map((c, i) => (
                         <div key={i} className="flex items-center gap-2.5 px-4 py-2.5">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${c.ok ? 'bg-emerald-100 text-emerald-600' : c.warn ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-500'}`}>
+                          <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${c.ok ? 'bg-blue-100 text-blue-600' : c.warn ? 'bg-amber-100 text-amber-600' : 'bg-red-100 text-red-500'}`}>
                             {c.ok ? <Check size={11}/> : c.warn ? <AlertTriangle size={11}/> : <X size={11}/>}
                           </span>
                           <span className={`text-xs font-medium ${c.ok ? 'text-slate-600' : c.warn ? 'text-amber-600' : 'text-red-600'}`}>{c.label}</span>
@@ -2023,7 +2023,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       <div className="flex justify-between"><span className="text-slate-400">Ara Toplam</span><span className="font-semibold tabular-nums">₺{fmtTL(formTotals?.sub ?? 0)}</span></div>
                       {(formTotals?.discount ?? 0) > 0 && <div className="flex justify-between"><span className="text-slate-400">İndirim {form.discountType === 'percent' ? `(%${form.discountRate})` : ''}</span><span className="font-semibold text-red-300 tabular-nums">-₺{fmtTL(formTotals!.discount)}</span></div>}
                       <div className="flex justify-between"><span className="text-slate-400">KDV (%{form.vatRate})</span><span className="font-semibold tabular-nums">₺{fmtTL(formTotals?.vat ?? 0)}</span></div>
-                      <div className="flex justify-between pt-2 mt-1 border-t border-slate-700"><span className="font-bold">Genel Toplam</span><span className="font-black text-emerald-400 text-sm tabular-nums">₺{fmtTL(formTotals?.total ?? 0)}</span></div>
+                      <div className="flex justify-between pt-2 mt-1 border-t border-slate-700"><span className="font-bold">Genel Toplam</span><span className="font-black text-blue-400 text-sm tabular-nums">₺{fmtTL(formTotals?.total ?? 0)}</span></div>
                     </div>
                   </div>
 
@@ -2048,7 +2048,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                             type="button"
                             disabled={!opt.has}
                             onClick={() => setForm(prev => prev && ({ ...prev, [opt.key]: !prev[opt.key] }))}
-                            className={`w-9 h-5 rounded-full relative transition-colors shrink-0 ${form[opt.key] ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                            className={`w-9 h-5 rounded-full relative transition-colors shrink-0 ${form[opt.key] ? 'bg-blue-500' : 'bg-slate-200'}`}
                           >
                             <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${form[opt.key] ? 'left-[18px]' : 'left-0.5'}`} />
                           </button>
@@ -2114,7 +2114,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                     <button
                       key={s.key}
                       onClick={() => goToStep(s.key)}
-                      className={`w-1.5 h-1.5 rounded-full transition-all ${wizardStep === s.key ? 'bg-emerald-600 scale-110' : stepDone(s.key) ? 'bg-emerald-300 hover:bg-emerald-400' : 'bg-slate-200 hover:bg-slate-300'}`}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${wizardStep === s.key ? 'bg-blue-600 scale-110' : stepDone(s.key) ? 'bg-blue-300 hover:bg-blue-400' : 'bg-slate-200 hover:bg-slate-300'}`}
                       title={s.label}
                     />
                   ))}
@@ -2125,14 +2125,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
               {wizardStep < 6 ? (
                 <button
                   onClick={goNext}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-emerald-200 active:scale-95"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-blue-200 active:scale-95"
                 >
                   Devam Et <ArrowRight size={14} />
                 </button>
               ) : (
                 <button
                   onClick={saveForm}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-emerald-200 active:scale-95"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-blue-200 active:scale-95"
                 >
                   <CheckCircle2 size={15} /> {editingId ? 'Değişiklikleri Kaydet' : 'Teklifi Kaydet'}
                 </button>
@@ -2149,7 +2149,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
           <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center"><AlertTriangle size={22}/></div>
           <h2 className="text-base font-black text-slate-800">Teklif Bulunamadı</h2>
           <p className="text-xs text-slate-500 mt-1.5 mb-5">Bu teklif silinmiş veya bağlantı hatalı olabilir.</p>
-          <button onClick={closeDetail} className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors"><ArrowLeft size={14}/> Teklif Listesine Dön</button>
+          <button onClick={closeDetail} className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-colors"><ArrowLeft size={14}/> Teklif Listesine Dön</button>
         </div>
       )}
       {showDetail && detailQuote && (() => {
@@ -2223,8 +2223,8 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 <button onClick={() => openEdit(vq)} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors"><Edit2 size={12}/> Düzenle</button>
                 <button onClick={() => setConfirmClone(vq)} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-colors"><Copy size={12}/> Kopyala</button>
                 <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-colors"><Printer size={12}/> Yazdır</button>
-                <button onClick={() => import('../../services/quotePdfService').then(m => m.previewQuotePdf(vq, vqCompany))} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-xl transition-colors"><Eye size={12}/> Önizle</button>
-                <button onClick={() => import('../../services/quotePdfService').then(m => m.downloadQuotePdf(vq, vqCompany))} className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-md shadow-emerald-200"><Download size={12}/> PDF İndir</button>
+                <button onClick={() => import('../../services/quotePdfService').then(m => m.previewQuotePdf(vq, vqCompany))} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded-xl transition-colors"><Eye size={12}/> Önizle</button>
+                <button onClick={() => import('../../services/quotePdfService').then(m => m.downloadQuotePdf(vq, vqCompany))} className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-md shadow-blue-200"><Download size={12}/> PDF İndir</button>
                 <button onClick={() => setConfirmDelete(vq.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-200 hover:border-red-200 bg-white rounded-xl transition-colors" title="Sil"><Trash2 size={13}/></button>
               </div>
             </div>
@@ -2305,7 +2305,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                         </tr>
                         <tr>
                           <td colSpan={3} className="pt-2 pb-1 text-right text-[11px] font-black text-slate-700">GENEL TOPLAM</td>
-                          <td className="pt-2 pb-1 pl-2 text-right text-sm font-black text-emerald-600 tabular-nums">₺{fmtTL(vqTotals.total)}</td>
+                          <td className="pt-2 pb-1 pl-2 text-right text-sm font-black text-blue-600 tabular-nums">₺{fmtTL(vqTotals.total)}</td>
                         </tr>
                       </tfoot>
                     </table>
@@ -2320,7 +2320,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 <Panel icon={Building2} title="Firma">
                   {vqCompany ? (
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center text-xs font-black shrink-0">{vqCompany.name.substring(0, 2).toUpperCase()}</div>
+                      <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center text-xs font-black shrink-0">{vqCompany.name.substring(0, 2).toUpperCase()}</div>
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-slate-800 truncate">{vqCompany.name}</p>
                         <p className="text-[10px] text-slate-400 truncate">{vqCompany.sector || '—'}{vqCompany.employeeCount !== undefined && ` · ${vqCompany.employeeCount} çalışan`}</p>
@@ -2338,9 +2338,9 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                     <div className="flex justify-between"><span className="text-slate-400">Ara Toplam</span><span className="font-semibold tabular-nums">₺{fmtTL(vqTotals.sub)}</span></div>
                     {vqTotals.discount > 0 && <div className="flex justify-between"><span className="text-slate-400">İndirim {vq.discountType === 'percent' ? `(%${vq.discountRate})` : ''}</span><span className="font-semibold text-red-300 tabular-nums">-₺{fmtTL(vqTotals.discount)}</span></div>}
                     <div className="flex justify-between"><span className="text-slate-400">KDV (%{vq.vatRate})</span><span className="font-semibold tabular-nums">₺{fmtTL(vqTotals.vat)}</span></div>
-                    <div className="flex justify-between pt-2 mt-1 border-t border-slate-700"><span className="font-bold">Genel Toplam</span><span className="font-black text-emerald-400 text-sm tabular-nums">₺{fmtTL(vqTotals.total)}</span></div>
+                    <div className="flex justify-between pt-2 mt-1 border-t border-slate-700"><span className="font-bold">Genel Toplam</span><span className="font-black text-blue-400 text-sm tabular-nums">₺{fmtTL(vqTotals.total)}</span></div>
                     {vqCompany?.employeeCount ? (
-                      <div className="flex justify-between pt-1 border-t border-slate-700"><span className="text-slate-400">Kişi Başı</span><span className="font-bold text-cyan-300 tabular-nums">₺{fmtTL(Math.round((vqTotals.total / vqCompany.employeeCount) * 100) / 100)}</span></div>
+                      <div className="flex justify-between pt-1 border-t border-slate-700"><span className="text-slate-400">Kişi Başı</span><span className="font-bold text-blue-300 tabular-nums">₺{fmtTL(Math.round((vqTotals.total / vqCompany.employeeCount) * 100) / 100)}</span></div>
                     ) : null}
                   </div>
                 </div>
@@ -2354,7 +2354,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all ${vqExpired ? 'bg-red-500' : remainDays <= 7 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      className={`h-full rounded-full transition-all ${vqExpired ? 'bg-red-500' : remainDays <= 7 ? 'bg-amber-500' : 'bg-blue-500'}`}
                       style={{ width: `${usedPct}%` }}
                     />
                   </div>
@@ -2368,8 +2368,8 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                   <div className="divide-y divide-slate-100 text-xs">
                     <div className="flex justify-between px-4 py-2.5"><span className="text-slate-500 font-medium">Tür</span><span className="font-bold text-slate-700">{quoteTypeLabel(vq.quoteType) ?? '—'}</span></div>
                     <div className="flex justify-between px-4 py-2.5"><span className="text-slate-500 font-medium">Kalem</span><span className="font-bold text-slate-700">{vq.items.length} kalem · {vq.items.reduce((s, i) => s + i.quantity, 0)} adet</span></div>
-                    <div className="flex justify-between px-4 py-2.5"><span className="text-slate-500 font-medium">Ön Yazı</span><span className={`font-bold ${vq.coverLetter && vq.includeCover !== false ? 'text-emerald-600' : 'text-slate-400'}`}>{vq.coverLetter && vq.includeCover !== false ? 'Dahil' : 'Yok'}</span></div>
-                    <div className="flex justify-between px-4 py-2.5"><span className="text-slate-500 font-medium">Şartlar</span><span className={`font-bold ${vq.terms?.length && vq.includeTerms !== false ? 'text-emerald-600' : 'text-slate-400'}`}>{vq.terms?.length && vq.includeTerms !== false ? `${vq.terms.length} madde` : 'Yok'}</span></div>
+                    <div className="flex justify-between px-4 py-2.5"><span className="text-slate-500 font-medium">Ön Yazı</span><span className={`font-bold ${vq.coverLetter && vq.includeCover !== false ? 'text-blue-600' : 'text-slate-400'}`}>{vq.coverLetter && vq.includeCover !== false ? 'Dahil' : 'Yok'}</span></div>
+                    <div className="flex justify-between px-4 py-2.5"><span className="text-slate-500 font-medium">Şartlar</span><span className={`font-bold ${vq.terms?.length && vq.includeTerms !== false ? 'text-blue-600' : 'text-slate-400'}`}>{vq.terms?.length && vq.includeTerms !== false ? `${vq.terms.length} madde` : 'Yok'}</span></div>
                   </div>
                 </Panel>
 
@@ -2414,7 +2414,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
         <div className={`${modalPanel} rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden`}>
           <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0"><Building2 size={18}/></div>
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0"><Building2 size={18}/></div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">Firma Seçin</h3>
                 <p className="text-[11px] text-slate-500">{companies.length} kayıtlı firma</p>
@@ -2431,7 +2431,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 placeholder="Firma adı, yetkili veya sektör ara..."
                 value={companySearch}
                 onChange={(e) => setCompanySearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all"
+                className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all"
               />
             </div>
           </div>
@@ -2445,13 +2445,13 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 <button
                   key={company.id}
                   onClick={() => { patchForm({ companyId: company.id }); setCompanyMenuOpen(false); setCompanySearch(''); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isSelected ? 'bg-emerald-50/70' : 'hover:bg-slate-50'}`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${isSelected ? 'bg-blue-50/70' : 'hover:bg-slate-50'}`}
                 >
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500'}`}>
                     {company.name.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm font-bold truncate ${isSelected ? 'text-emerald-800' : 'text-slate-700'}`}>{company.name}</p>
+                    <p className={`text-sm font-bold truncate ${isSelected ? 'text-blue-800' : 'text-slate-700'}`}>{company.name}</p>
                     <p className="text-[10px] text-slate-400 truncate">
                       {company.sector || '—'}
                       {company.employeeCount !== undefined && ` · ${company.employeeCount} çalışan`}
@@ -2459,7 +2459,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                       {company.contactPerson && ` · ${company.contactPerson}`}
                     </p>
                   </div>
-                  {isSelected && <Check size={15} className="text-emerald-600 shrink-0"/>}
+                  {isSelected && <Check size={15} className="text-blue-600 shrink-0"/>}
                 </button>
               );
             })}

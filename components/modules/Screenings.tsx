@@ -274,7 +274,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests }) =
           <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.upcoming}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Yaklaşan</p></div>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0"><Users size={18}/></div>
+          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><Users size={18}/></div>
           <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.people}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Planlanan Kişi</p></div>
         </div>
       </div>

@@ -248,7 +248,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                         : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                      <tab.icon size={17} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-emerald-400' : 'text-slate-400'} />
+                      <tab.icon size={17} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'text-blue-400' : 'text-slate-400'} />
                       <div className="min-w-0">
                         <p className={`text-sm font-bold leading-tight ${isActive ? 'text-white' : 'text-slate-700'}`}>{tab.label}</p>
                         <p className={`text-[10px] leading-tight hidden lg:block ${isActive ? 'text-slate-400' : 'text-slate-400'}`}>{tab.desc}</p>
@@ -294,7 +294,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
 
                               <div className="pt-4 border-t border-slate-200">
                                    <div className="flex items-center gap-3 mb-2">
-                                       <div className={`w-2 h-2 rounded-full ${navigator.onLine ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                       <div className={`w-2 h-2 rounded-full ${navigator.onLine ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
                                        <span className="text-sm font-bold text-slate-700">{navigator.onLine ? 'Çevrimiçi' : 'Çevrimdışı'}</span>
                                    </div>
                                    <p className="text-xs text-slate-400">Veriler tarayıcı hafızasında saklanır.</p>
@@ -336,10 +336,10 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
 
                               <button 
                                 onClick={handleRestoreClick}
-                                className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl hover:border-green-500 hover:ring-1 hover:ring-green-500 transition-all shadow-sm hover:shadow-md relative"
+                                className="group flex flex-col items-center text-center p-6 bg-white border border-slate-200 rounded-2xl hover:border-emerald-500 hover:ring-1 hover:ring-emerald-500 transition-all shadow-sm hover:shadow-md relative"
                               >
                                   <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".json" />
-                                  <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                       <Upload size={24}/>
                                   </div>
                                   <h4 className="font-bold text-slate-800">Geri Yükle</h4>
@@ -349,7 +349,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                       </div>
 
                       {/* Demo Data Banner */}
-                      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-1 shadow-lg">
+                      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-1 shadow-lg">
                           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-6">
                               <div className="flex items-center gap-4 text-white">
                                   <div className="p-3 bg-white/20 rounded-xl"><FlaskConical size={24}/></div>
@@ -508,7 +508,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
           {activeTab === 'org' && (
               <div className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <div className="mb-6">
-                      <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Building2 size={18} className="text-emerald-600"/> Kurum Bilgileri</h3>
+                      <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Building2 size={18} className="text-blue-600"/> Kurum Bilgileri</h3>
                       <p className="text-xs text-slate-500 mt-1">Bu bilgiler teklif/rapor antetlerinde, imza bloklarında ve uygulama markasında kullanılır.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
@@ -516,64 +516,64 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Kurum Adı *</label>
                           <input type="text" value={orgForm.name} onChange={e => setOrgForm(p => ({ ...p, name: e.target.value }))}
                             placeholder="ör. HanTech OSGB"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Kısa Açıklama / Slogan</label>
                           <input type="text" value={orgForm.tagline ?? ''} onChange={e => setOrgForm(p => ({ ...p, tagline: e.target.value }))}
                             placeholder="ör. Mobil Sağlık Hizmetleri"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Telefon</label>
                           <input type="text" value={orgForm.phone ?? ''} onChange={e => setOrgForm(p => ({ ...p, phone: e.target.value }))}
                             placeholder="0850 000 00 00"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">E-posta</label>
                           <input type="email" value={orgForm.email ?? ''} onChange={e => setOrgForm(p => ({ ...p, email: e.target.value }))}
                             placeholder="info@kurum.com"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Web Sitesi</label>
                           <input type="text" value={orgForm.web ?? ''} onChange={e => setOrgForm(p => ({ ...p, web: e.target.value }))}
                             placeholder="www.kurum.com"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div className="md:col-span-2">
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Adres</label>
                           <textarea value={orgForm.address ?? ''} onChange={e => setOrgForm(p => ({ ...p, address: e.target.value }))}
                             rows={2} placeholder="Kurum adresi"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all resize-none" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all resize-none" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Vergi Dairesi</label>
                           <input type="text" value={orgForm.taxOffice ?? ''} onChange={e => setOrgForm(p => ({ ...p, taxOffice: e.target.value }))}
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Vergi No</label>
                           <input type="text" value={orgForm.taxNumber ?? ''} onChange={e => setOrgForm(p => ({ ...p, taxNumber: e.target.value }))}
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">İmza Yetkilisi</label>
                           <input type="text" value={orgForm.signerName ?? ''} onChange={e => setOrgForm(p => ({ ...p, signerName: e.target.value }))}
                             placeholder="Ad Soyad"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                       <div>
                           <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Yetkili Unvanı</label>
                           <input type="text" value={orgForm.signerTitle ?? ''} onChange={e => setOrgForm(p => ({ ...p, signerTitle: e.target.value }))}
                             placeholder="ör. Genel Müdür"
-                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 outline-none transition-all" />
+                            className="mt-1 w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none transition-all" />
                       </div>
                   </div>
                   <div className="mt-6 flex items-center gap-3">
                       <button onClick={saveOrg}
-                        className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-emerald-200 active:scale-95">
+                        className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200 active:scale-95">
                           <Save size={15}/> Kaydet
                       </button>
                       <p className="text-[10px] text-slate-400">Kaydedince menü markası, teklif ve rapor antetleri anında güncellenir.</p>
@@ -586,7 +586,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
               <div className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
                       <div>
-                          <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Palette size={18} className="text-emerald-600"/> Görünüm Ayarları</h3>
+                          <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Palette size={18} className="text-blue-600"/> Görünüm Ayarları</h3>
                           <p className="text-xs text-slate-500 mt-1">Tema, renk ve yoğunluk tercihleri — değişiklikler anında uygulanır ve bu tarayıcıda saklanır.</p>
                       </div>
                       <button
@@ -688,7 +688,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                                       <button
                                           type="button"
                                           onClick={(e) => { e.preventDefault(); updateAppearancePref({ [opt.key]: !appearance[opt.key] }); }}
-                                          className={`w-11 h-6 rounded-full relative transition-colors shrink-0 ${appearance[opt.key] ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                          className={`w-11 h-6 rounded-full relative transition-colors shrink-0 ${appearance[opt.key] ? 'bg-blue-500' : 'bg-slate-300'}`}
                                       >
                                           <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${appearance[opt.key] ? 'left-6' : 'left-1'}`} />
                                       </button>
@@ -730,7 +730,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${currentUser?.role === 'super_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                                    {currentUser?.role === 'super_admin' ? 'Yönetici' : 'Kullanıcı'}
                                </span>
-                               <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 uppercase">
+                               <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase">
                                    <Activity size={10} /> Aktif Oturum
                                </span>
                            </div>
@@ -856,7 +856,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                                           </td>
                                           <td className="px-6 py-3">
                                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                                                  log.action === 'LOGIN' ? 'bg-green-50 text-green-700 border-green-100' :
+                                                  log.action === 'LOGIN' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                                   log.action === 'LOGOUT' ? 'bg-slate-100 text-slate-600 border-slate-200' :
                                                   log.action === 'DELETE_RECORD' || log.action === 'RESET' ? 'bg-red-50 text-red-700 border-red-100' :
                                                   'bg-blue-50 text-blue-700 border-blue-100'

@@ -60,7 +60,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         <div className="md:col-span-3 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="p-5 border-b border-slate-100 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-50 rounded-lg text-purple-600"><ScatterChart size={20}/></div>
+                    <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><ScatterChart size={20}/></div>
                     <div>
                         <h4 className="font-bold text-slate-800 uppercase tracking-wide">Parametre Dağılım Analizi</h4>
                         <p className="text-xs text-slate-400">Çalışanların seçili testteki değer dağılımı</p>
@@ -69,7 +69,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                 <select
                   value={selectedAnalyticsTestId}
                   onChange={(e) => onSelectAnalyticsTest(e.target.value)}
-                  className="text-sm border-slate-200 rounded-xl focus:ring-purple-500 focus:border-purple-500 bg-slate-50 font-bold text-slate-700 py-2 px-3 min-w-[200px]"
+                  className="text-sm border-slate-200 rounded-xl focus:ring-blue-500 focus:border-blue-500 bg-slate-50 font-bold text-slate-700 py-2 px-3 min-w-[200px]"
                 >
                     <option value="" disabled>Test Seçin...</option>
                     {(selectedCompany?.tests ?? []).flatMap(t => t.subTests ? t.subTests : [t])
@@ -86,15 +86,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
 
                         {/* Reference Range Background */}
                         <div
-                          className="absolute top-4 bottom-8 bg-green-50/50 border-x border-green-100"
+                          className="absolute top-4 bottom-8 bg-emerald-50/50 border-x border-emerald-100"
                           style={{
                               left: `${((chartData.definition.range!.min - chartData.minPlot) / chartData.range) * 100}%`,
                               width: `${((chartData.definition.range!.max - chartData.definition.range!.min) / chartData.range) * 100}%`
                           }}
                         >
-                            <div className="absolute top-0 left-0 -translate-y-full text-[10px] font-bold text-green-600">Min: {chartData.definition.range!.min}</div>
-                            <div className="absolute top-0 right-0 -translate-y-full text-[10px] font-bold text-green-600">Max: {chartData.definition.range!.max}</div>
-                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-green-600/20 uppercase tracking-widest pointer-events-none">Referans Aralığı</div>
+                            <div className="absolute top-0 left-0 -translate-y-full text-[10px] font-bold text-emerald-600">Min: {chartData.definition.range!.min}</div>
+                            <div className="absolute top-0 right-0 -translate-y-full text-[10px] font-bold text-emerald-600">Max: {chartData.definition.range!.max}</div>
+                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-emerald-600/20 uppercase tracking-widest pointer-events-none">Referans Aralığı</div>
                         </div>
 
                         {/* Data Points */}
@@ -107,7 +107,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                             return (
                                 <div
                                   key={point.id}
-                                  className={`absolute w-3 h-3 rounded-full border-2 border-white shadow-sm transition-all hover:scale-150 hover:z-20 group cursor-pointer ${isHigh ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-green-500'}`}
+                                  className={`absolute w-3 h-3 rounded-full border-2 border-white shadow-sm transition-all hover:scale-150 hover:z-20 group cursor-pointer ${isHigh ? 'bg-red-500' : isLow ? 'bg-orange-500' : 'bg-emerald-500'}`}
                                   style={{ left: `${leftPct}%`, top: `${topPct}%` }}
                                   onClick={() => { const rec = records.find(r => r.id === point.id); if (rec) onOpenRecord(rec); }}
                                 >
@@ -159,7 +159,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                                 <td className="px-4 py-4 text-center">
                                     <div className="flex items-center justify-center gap-3">
                                         <div className="w-24 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                            <div style={{width: `${dept.anomalyRate}%`}} className={`h-full rounded-full shadow-sm ${dept.anomalyRate > 50 ? 'bg-red-500' : dept.anomalyRate > 20 ? 'bg-orange-500' : 'bg-green-500'}`}></div>
+                                            <div style={{width: `${dept.anomalyRate}%`}} className={`h-full rounded-full shadow-sm ${dept.anomalyRate > 50 ? 'bg-red-500' : dept.anomalyRate > 20 ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
                                         </div>
                                         <span className="text-xs font-bold text-slate-600 w-8 text-left">%{dept.anomalyRate}</span>
                                     </div>

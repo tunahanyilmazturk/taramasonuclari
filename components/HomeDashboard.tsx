@@ -75,10 +75,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
   const QUICK_ACTIONS = [
     { tab: 'dashboard', icon: Plus, label: 'Yeni Sonuç', desc: 'PDF okut & analiz et', color: 'bg-blue-50 text-blue-600' },
     { tab: 'quotes', icon: FileText, label: 'Yeni Teklif', desc: 'Fiyat teklifi hazırla', color: 'bg-indigo-50 text-indigo-600' },
-    { tab: 'screenings', icon: Stethoscope, label: 'Tarama Planla', desc: 'Saha operasyonu', color: 'bg-emerald-50 text-emerald-600' },
+    { tab: 'screenings', icon: Stethoscope, label: 'Tarama Planla', desc: 'Saha operasyonu', color: 'bg-blue-50 text-blue-600' },
     { tab: 'companies', icon: Building2, label: 'Firma Ekle', desc: 'Müşteri kaydı', color: 'bg-amber-50 text-amber-600' },
-    { tab: 'calendar', icon: CalendarDays, label: 'Takvim', desc: 'Ajanda & randevular', color: 'bg-violet-50 text-violet-600' },
-    { tab: 'config', icon: FlaskConical, label: 'Test Havuzu', desc: 'Tetkik tanımları', color: 'bg-rose-50 text-rose-500' }
+    { tab: 'calendar', icon: CalendarDays, label: 'Takvim', desc: 'Ajanda & randevular', color: 'bg-indigo-50 text-indigo-600' },
+    { tab: 'config', icon: FlaskConical, label: 'Test Havuzu', desc: 'Tetkik tanımları', color: 'bg-indigo-50 text-indigo-500' }
   ];
 
   const companyName = (id: string) => companies.find(c => c.id === id)?.name ?? '—';
@@ -121,7 +121,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
         {/* Karşılama altı mini özet */}
         {hasData && (
           <div className="relative mt-6 pt-5 border-t border-white/10 flex flex-wrap gap-x-6 gap-y-2 text-[11px] font-semibold text-slate-300">
-            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-400"/> {stats.records} sonuç kaydı</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-blue-400"/> {stats.records} sonuç kaydı</span>
             <span className="flex items-center gap-1.5"><Stethoscope size={12} className="text-blue-300"/> {stats.upcoming} planlanan tarama{stats.todayOps > 0 ? ` (${stats.todayOps} bugün)` : ''}</span>
             <span className="flex items-center gap-1.5"><FileText size={12} className="text-indigo-300"/> {stats.openQuotes} açık teklif</span>
             {stats.pendingReview > 0 && <span className="flex items-center gap-1.5"><Eye size={12} className="text-amber-300"/> {stats.pendingReview} inceleme bekliyor</span>}
@@ -135,8 +135,8 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
           { label: 'Firma', value: stats.companies, icon: Building2, cls: 'bg-blue-50 text-blue-600', tab: 'companies' },
           { label: 'Sonuç Kaydı', value: stats.records, icon: FileText, cls: 'bg-indigo-50 text-indigo-600', tab: 'dashboard' },
           { label: 'Bekleyen İnceleme', value: stats.pendingReview, icon: Eye, cls: 'bg-amber-50 text-amber-600', tab: 'dashboard' },
-          { label: 'Planlanan Tarama', value: stats.upcoming, icon: Stethoscope, cls: 'bg-emerald-50 text-emerald-600', tab: 'screenings' },
-          { label: 'Açık Teklif', value: stats.openQuotes, icon: ClipboardList, cls: 'bg-violet-50 text-violet-600', tab: 'quotes' }
+          { label: 'Planlanan Tarama', value: stats.upcoming, icon: Stethoscope, cls: 'bg-blue-50 text-blue-600', tab: 'screenings' },
+          { label: 'Açık Teklif', value: stats.openQuotes, icon: ClipboardList, cls: 'bg-indigo-50 text-indigo-600', tab: 'quotes' }
         ].map(s => (
           <button
             key={s.label}
@@ -194,7 +194,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
                 const pct = s.plannedCount > 0 ? Math.round((s.completedCount / s.plannedCount) * 100) : 0;
                 return (
                   <button key={s.id} onClick={() => onNavigate('screenings')} className="w-full flex items-center gap-3.5 px-5 py-3.5 hover:bg-blue-50/40 transition-colors text-left">
-                    <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 ${isToday ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                    <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 ${isToday ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
                       <span className="text-sm font-black leading-none">{new Date(s.date).getDate()}</span>
                       <span className="text-[8px] font-bold uppercase">{new Date(s.date).toLocaleDateString('tr-TR', { month: 'short' })}</span>
                     </div>
@@ -205,7 +205,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
                       </p>
                     </div>
                     {s.status === 'devam_ediyor' && <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 shrink-0">DEVAM</span>}
-                    {isToday && <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">BUGÜN</span>}
+                    {isToday && <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 shrink-0">BUGÜN</span>}
                     {s.plannedCount > 0 && <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0">%{pct}</span>}
                   </button>
                 );
@@ -222,7 +222,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
           </div>
           {pendingRecords.length === 0 ? (
             <div className="py-10 text-center">
-              <CheckCircle2 size={24} className="mx-auto text-emerald-300 mb-2" />
+              <CheckCircle2 size={24} className="mx-auto text-blue-300 mb-2" />
               <p className="text-xs text-slate-400">Tüm kayıtlar incelendi — bekleyen iş yok</p>
             </div>
           ) : (
@@ -304,7 +304,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
                 <p className="text-xs font-bold text-slate-800">Onaylı teklif cirosu</p>
                 <p className="text-lg font-black text-emerald-700 tabular-nums">₺{stats.approvedTotal.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}</p>
               </div>
-              <button onClick={() => onNavigate('quotes')} className="text-[10px] font-bold text-emerald-700 bg-white border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-50 transition-colors shrink-0">
+              <button onClick={() => onNavigate('quotes')} className="text-[10px] font-bold text-emerald-700 bg-white border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-blue-50 transition-colors shrink-0">
                 Teklifler →
               </button>
             </div>

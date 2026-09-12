@@ -46,7 +46,7 @@ const DEMO_PRESETS: DemoAccountInfo[] = [
     label: 'Ayşe Demir',
     roleTitle: 'Sağlık Memuru',
     roleBadge: 'Mobil Ekip',
-    badgeColor: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    badgeColor: 'bg-blue-100 text-blue-700 border-blue-200',
     icon: Users,
     description: 'Mobil tarama aracı veri girişi, PDF test aktarımı ve sonuç kontrolü.'
   }
@@ -251,7 +251,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onLoadDemoData }) => {
                   onClick={handleTriggerDemoData}
                   className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
                     demoLoadedNotice
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      ? 'bg-blue-50 border-blue-200 text-blue-700'
                       : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-800'
                   }`}
                 >
@@ -381,7 +381,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onLoadDemoData }) => {
 
             <div className="mt-9 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
               <div className="flex items-center gap-1.5 font-medium">
-                <ShieldCheck size={14} className="text-emerald-500" />
+                <ShieldCheck size={14} className="text-blue-500" />
                 <span>SHA-256 Şifreli Oturum</span>
               </div>
               <div className="flex items-center gap-2">

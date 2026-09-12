@@ -135,7 +135,7 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
           <span className="font-bold text-xs sm:text-sm whitespace-nowrap">{selectedRecordIds.size} seçildi</span>
           <div className="h-4 w-px bg-slate-700"></div>
           <button onClick={onBulkDelete} className="text-red-400 hover:text-red-300 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap"><Trash2 size={16} /> Sil</button>
-          <button onClick={onBulkExport} className="text-green-400 hover:text-green-300 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap"><Download size={16} /> Excel</button>
+          <button onClick={onBulkExport} className="text-emerald-400 hover:text-emerald-300 font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-colors whitespace-nowrap"><Download size={16} /> Excel</button>
           <button onClick={onClearSelection} className="text-slate-400 hover:text-white"><XIcon size={16} /></button>
         </div>
       )}
@@ -155,7 +155,7 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
                       <div className="flex">
                           <button onClick={() => onReviewFilterChange('all')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all whitespace-nowrap ${reviewFilter === 'all' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Tüm Durumlar</button>
                           <button onClick={() => onReviewFilterChange('pending')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${reviewFilter === 'pending' ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><Shield size={12} />Bekleyen</button>
-                          <button onClick={() => onReviewFilterChange('reviewed')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${reviewFilter === 'reviewed' ? 'bg-green-50 text-green-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><ShieldCheck size={12} />Onaylı</button>
+                          <button onClick={() => onReviewFilterChange('reviewed')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all flex items-center gap-1 whitespace-nowrap ${reviewFilter === 'reviewed' ? 'bg-emerald-50 text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}><ShieldCheck size={12} />Onaylı</button>
                       </div>
                   </div>
 
@@ -194,7 +194,7 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
           {paginatedRecords.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                   <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                      {filterType === 'risky' ? <CheckCircle2 size={32} className="text-green-500"/> : filterType === 'missing' ? <FileWarning size={32} className="text-orange-500"/> : reviewFilter !== 'all' ? <ShieldCheck size={32} className="text-blue-500"/> : <Search size={32} className="opacity-40"/>}
+                      {filterType === 'risky' ? <CheckCircle2 size={32} className="text-emerald-500"/> : filterType === 'missing' ? <FileWarning size={32} className="text-orange-500"/> : reviewFilter !== 'all' ? <ShieldCheck size={32} className="text-blue-500"/> : <Search size={32} className="opacity-40"/>}
                   </div>
                   <p className="text-sm font-medium">Kriterlere uygun kayıt bulunamadı.</p>
 
@@ -225,12 +225,12 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
               {paginatedRecords.map((record) => {
               const isSelected = selectedRecordIds.has(record.id);
               return (
-              <tr key={record.id} className={`transition-all group ${isSelected ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-slate-50'} ${record.isReviewed ? 'opacity-70 bg-green-50/20' : ''}`}>
+              <tr key={record.id} className={`transition-all group ${isSelected ? 'bg-blue-50/50 hover:bg-blue-50' : 'hover:bg-slate-50'} ${record.isReviewed ? 'opacity-70 bg-emerald-50/20' : ''}`}>
                   <td className={`px-3 ${isCompact ? 'py-2' : 'py-4'} text-center`}><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white" checked={isSelected} onChange={() => onSelectRow(record.id)}/></td>
                   <td className={`px-2 ${isCompact ? 'py-2' : 'py-4'} text-center relative`}>
                       <button
                           onClick={() => onToggleReview(record.id)}
-                          className={`p-1.5 rounded-lg transition-all ${record.isReviewed ? 'text-green-600 bg-green-100 hover:bg-green-200' : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'}`}
+                          className={`p-1.5 rounded-lg transition-all ${record.isReviewed ? 'text-emerald-600 bg-emerald-100 hover:bg-emerald-200' : 'text-slate-300 bg-slate-100 hover:bg-slate-200 hover:text-slate-500'}`}
                           title={record.isReviewed ? "Onayı Kaldır" : "Onayla"}
                       >
                           {record.isReviewed ? <ShieldCheck size={18} /> : <Shield size={18} />}

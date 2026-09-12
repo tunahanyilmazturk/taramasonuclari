@@ -74,7 +74,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
     const normalPct = Math.round(((totalTests - anomalies) / totalTests) * 100);
 
     let label = 'Mükemmel';
-    let color = 'text-green-500';
+    let color = 'text-emerald-500';
 
     if (normalPct < 50) { label = 'Yüksek Risk'; color = 'text-red-600'; }
     else if (normalPct < 75) { label = 'Dikkat Gerektirir'; color = 'text-orange-500'; }
@@ -255,7 +255,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-100 to-slate-100 flex items-center justify-center text-slate-400">
                            <UserCircle size={28} className="opacity-50"/>
                        </div>
-                       <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${patientScore.score >= 85 ? 'bg-green-500' : patientScore.score >= 60 ? 'bg-orange-500' : 'bg-red-500'}`}></div>
+                       <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${patientScore.score >= 85 ? 'bg-emerald-500' : patientScore.score >= 60 ? 'bg-orange-500' : 'bg-red-500'}`}></div>
                    </div>
                    <div className="flex-1 min-w-0">
                        <h2 className="text-base font-bold text-slate-900 truncate">{record.patientName}</h2>
@@ -267,7 +267,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                    </div>
                    <div className="flex flex-col items-end gap-1 shrink-0">
                        <span className={`text-sm font-black ${patientScore.color}`}>{patientScore.score}<span className="text-[8px] text-slate-400 font-bold">/100</span></span>
-                       <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${record.isReviewed ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                       <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${record.isReviewed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
                            {record.isReviewed ? 'Onaylı' : 'Bekliyor'}
                        </span>
                    </div>
@@ -281,7 +281,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                             <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-100 to-slate-100 flex items-center justify-center text-slate-400">
                                 <UserCircle size={64} className="opacity-50"/>
                             </div>
-                            <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white ${patientScore.score >= 85 ? 'bg-green-500' : patientScore.score >= 60 ? 'bg-orange-500' : 'bg-red-500'}`}></div>
+                            <div className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-white ${patientScore.score >= 85 ? 'bg-emerald-500' : patientScore.score >= 60 ? 'bg-orange-500' : 'bg-red-500'}`}></div>
                         </div>
                         <h2 className="text-2xl font-bold text-slate-900">{record.patientName}</h2>
                         <p className="text-sm font-medium text-slate-500 mt-1">{record.jobTitle || 'Pozisyon Belirtilmemiş'}</p>
@@ -289,13 +289,13 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                             <span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded-md text-slate-600">{record.registrationNumber || 'ID Yok'}</span>
                             <span className="text-xs font-bold bg-white border border-slate-200 px-2 py-1 rounded-md text-slate-600">{record.date}</span>
                         </div>
-                        <div className={`mt-4 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-2 ${record.isReviewed ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                        <div className={`mt-4 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide flex items-center gap-2 ${record.isReviewed ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
                             {record.isReviewed ? <CheckCircle2 size={14}/> : <Shield size={14}/>}
                             {record.isReviewed ? 'ONAYLANDI' : 'BEKLEMEDE'}
                         </div>
                     </div>
                     <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-6 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-400 to-blue-500"></div>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-blue-500"></div>
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 text-center">Genel Sağlık Skoru</h3>
 
                         {/* Skor göstergesi */}
@@ -345,7 +345,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                                 <div>
                                     <div className="flex gap-3 mb-2">
                                         <div className="flex items-center gap-1.5">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
                                             <span className="text-[10px] font-bold text-slate-600">{normal} Normal</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
@@ -358,7 +358,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                                         </div>
                                     </div>
                                     <div className="w-full h-3 rounded-full overflow-hidden flex bg-slate-100">
-                                        <div className="bg-green-500 transition-all duration-500" style={{ width: `${nPct}%` }} />
+                                        <div className="bg-emerald-500 transition-all duration-500" style={{ width: `${nPct}%` }} />
                                         <div className="bg-red-500 transition-all duration-500" style={{ width: `${aPct}%` }} />
                                         <div className="bg-slate-300 transition-all duration-500" style={{ width: `${mPct}%` }} />
                                     </div>
@@ -370,7 +370,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                         {!isEditing && (
                             <button
                                 onClick={() => onToggleReview(record.id)}
-                                className={`w-full py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 ${record.isReviewed ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' : 'bg-green-600 text-white hover:bg-green-700 shadow-green-200'}`}
+                                className={`w-full py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 active:scale-95 ${record.isReviewed ? 'bg-slate-100 text-slate-500 hover:bg-slate-200' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200'}`}
                             >
                                 {record.isReviewed ? (
                                     <>
@@ -455,7 +455,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                        {patientHistory.length > 1 && (
                            <button
                                onClick={() => setModalMode('history')}
-                               className={`px-3 md:px-4 py-2 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 md:gap-2 whitespace-nowrap shrink-0 ${modalMode === 'history' ? 'bg-purple-50 text-purple-600' : 'text-slate-500 hover:bg-slate-50'}`}
+                               className={`px-3 md:px-4 py-2 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 md:gap-2 whitespace-nowrap shrink-0 ${modalMode === 'history' ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
                            >
                                <History size={15}/> Geçmiş ({patientHistory.length})
                            </button>
@@ -583,7 +583,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                                                             return (
                                                                 <div className="mt-1.5">
                                                                     <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden relative">
-                                                                        <div className="absolute inset-y-0 left-0 bg-green-400/40 rounded-full" style={{ width: '100%' }} />
+                                                                        <div className="absolute inset-y-0 left-0 bg-emerald-400/40 rounded-full" style={{ width: '100%' }} />
                                                                         <div
                                                                             className={`absolute inset-y-0 rounded-full ${status === ResultStatus.NORMAL ? 'bg-blue-500' : status === ResultStatus.HIGH ? 'bg-red-500' : 'bg-orange-500'}`}
                                                                             style={{ left: `${Math.max(0, pct - 2)}%`, width: '4px', height: '100%' }}
@@ -724,7 +724,7 @@ export const PatientModal: React.FC<PatientModalProps> = ({
                        <>
                            <button
                                onClick={() => onToggleReview(record.id)}
-                               className={`flex-1 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap flex items-center justify-center gap-1.5 active:scale-95 ${record.isReviewed ? 'bg-slate-100 text-slate-500' : 'bg-green-600 text-white'}`}
+                               className={`flex-1 py-2.5 rounded-xl font-bold text-xs whitespace-nowrap flex items-center justify-center gap-1.5 active:scale-95 ${record.isReviewed ? 'bg-slate-100 text-slate-500' : 'bg-emerald-600 text-white'}`}
                            >
                                {record.isReviewed ? <><XIcon size={15}/> Onayı Kaldır</> : <><CheckCircle2 size={15}/> Onayla</>}
                            </button>

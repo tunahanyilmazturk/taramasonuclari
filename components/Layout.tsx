@@ -288,7 +288,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <div className={`p-4 mt-auto border-t border-slate-100 bg-slate-50/50 ${isDesktopCollapsed ? 'items-center' : ''}`}>
              <div className={`flex items-center gap-3 ${isDesktopCollapsed ? 'justify-center' : ''}`}>
                  <div className={`relative w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shrink-0 border-2 border-white shadow-sm ${
-                     isSuperAdmin ? 'bg-gradient-to-tr from-violet-500 to-purple-600 text-white' : 'bg-slate-200 text-slate-600'
+                     isSuperAdmin ? 'bg-gradient-to-tr from-purple-500 to-purple-600 text-white' : 'bg-slate-200 text-slate-600'
                  }`}>
                      {getInitials(currentUser.fullName)}
                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" title="Çevrimiçi" />
@@ -297,7 +297,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                      <div className="flex-1 min-w-0">
                          <p className="text-sm font-bold text-slate-800 truncate">{currentUser.fullName}</p>
                          <span className={`inline-block mt-0.5 px-1.5 py-px rounded text-[9px] font-bold uppercase tracking-wide ${
-                             isSuperAdmin ? 'bg-violet-100 text-violet-700' : 'bg-slate-200 text-slate-500'
+                             isSuperAdmin ? 'bg-purple-100 text-purple-700' : 'bg-slate-200 text-slate-500'
                          }`}>
                              {isSuperAdmin ? 'Yönetici' : 'Personel'}
                          </span>
@@ -507,7 +507,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                     className={`flex items-center gap-2.5 pl-1.5 pr-2 py-1.5 rounded-xl transition-all border ${userMenuOpen ? 'bg-blue-50 border-blue-200' : 'hover:bg-slate-100 border-transparent'}`}
                 >
                     <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 ${
-                        isSuperAdmin ? 'bg-gradient-to-tr from-violet-500 to-purple-600 text-white' : 'bg-slate-200 text-slate-600'
+                        isSuperAdmin ? 'bg-gradient-to-tr from-purple-500 to-purple-600 text-white' : 'bg-slate-200 text-slate-600'
                     }`}>
                         {getInitials(currentUser.fullName)}
                         <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />

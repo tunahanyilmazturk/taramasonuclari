@@ -939,17 +939,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <button
                       key={s.id}
                       onClick={() => onNavigate?.('screenings')}
-                      className="bg-white rounded-2xl border border-slate-200 p-4 text-left hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-100/50 transition-all group"
+                      className="bg-white rounded-2xl border border-slate-200 p-4 text-left hover:border-blue-300 hover:shadow-lg hover:shadow-blue-100/50 transition-all group"
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg border ${isToday ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg border ${isToday ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                           {isToday ? 'BUGÜN' : new Date(s.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
                         </span>
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg ${s.status === 'devam_ediyor' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500'}`}>
                           {s.status === 'devam_ediyor' ? 'DEVAM EDİYOR' : 'PLANLANDI'}
                         </span>
                       </div>
-                      <h3 className="text-xs font-black text-slate-800 truncate group-hover:text-emerald-700 transition-colors">{s.title}</h3>
+                      <h3 className="text-xs font-black text-slate-800 truncate group-hover:text-blue-700 transition-colors">{s.title}</h3>
                       <p className="text-[10px] text-slate-400 truncate mt-0.5">{comp?.name || '—'}</p>
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-2">
                         <MapPin size={10} className="shrink-0"/> <span className="truncate">{s.location || '—'}</span>
@@ -957,7 +957,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {s.plannedCount > 0 && (
                         <div className="mt-2.5">
                           <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+                            <div className="h-full bg-blue-500 rounded-full" style={{ width: `${pct}%` }} />
                           </div>
                           <p className="text-[9px] text-slate-400 mt-1">{s.completedCount}/{s.plannedCount} kişi</p>
                         </div>
@@ -999,7 +999,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {total > 0 && (
                       <>
                         <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          <div className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
                         </div>
                         <div className="flex items-center justify-between mt-2 text-[10px] text-slate-400 font-medium">
                           <span>{reviewed}/{total} incelendi (%{pct})</span>
@@ -1151,7 +1151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   }}
                   className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
                     isActive ? 'bg-blue-600 text-white shadow-md shadow-blue-200' :
-                    isDone ? 'bg-green-50 text-green-600 hover:bg-green-100' :
+                    isDone ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' :
                     'bg-slate-100 text-slate-400'
                   }`}
                 >
@@ -1440,7 +1440,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`} title="Liste Görünümü"><List size={18} /></button>
                  <button onClick={() => setViewMode('analytics')} className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'analytics' ? 'bg-white shadow-sm text-blue-600 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`} title="Analiz Raporu"><BarChart3 size={18} /></button>
               </div>
-              <button onClick={() => exportToExcel(companyRecordsBase, selectedCompany.tests)} className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-medium text-xs sm:text-sm transition-all shadow-md shadow-emerald-200 active:scale-95"><Download size={16} /><span className="hidden sm:inline">Excel Raporu</span></button>
+              <button onClick={() => exportToExcel(companyRecordsBase, selectedCompany.tests)} className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium text-xs sm:text-sm transition-all shadow-md shadow-blue-200 active:scale-95"><Download size={16} /><span className="hidden sm:inline">Excel Raporu</span></button>
             </div>
           </div>
 
@@ -1450,7 +1450,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               {/* Compact action bar */}
               <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-200 px-5 py-3">
                 <div className="flex items-center gap-3">
-                  <CheckCircle2 size={18} className="text-green-500" />
+                  <CheckCircle2 size={18} className="text-emerald-500" />
                   <span className="text-sm font-bold text-slate-700">{companyRecordsBase.length} kayıt işlendi</span>
                 </div>
                 <button

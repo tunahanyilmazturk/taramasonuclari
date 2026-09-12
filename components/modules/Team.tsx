@@ -10,7 +10,7 @@ export const Team: React.FC<TeamProps> = ({ onGoToDashboard }) => {
   return (
     <PlaceholderPage
       icon={HardHat}
-      iconBg="bg-violet-600"
+      iconBg="bg-blue-600"
       iconColor="text-white"
       title="Ekip"
       subtitle="Saha sağlık personelinizi, sertifikalarını ve tarama atamalarını yönetin."

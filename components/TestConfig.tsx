@@ -168,7 +168,7 @@ const TestRow: React.FC<TestRowProps> = ({
                 {/* PRICE COLUMN — tekliflerde varsayılan birim fiyat */}
                 <td className="px-4 py-3">
                     {depth === 0 ? (
-                        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1 w-fit mx-auto group/price focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-100 transition-all">
+                        <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg p-1 w-fit mx-auto group/price focus-within:border-blue-300 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
                             <span className="text-slate-400 text-[10px] font-bold pl-1">₺</span>
                             <input
                                 type="number"
@@ -214,7 +214,7 @@ const TestRow: React.FC<TestRowProps> = ({
 
                         <button 
                             onClick={() => onAddSub(test.id)}
-                            className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="Alt Parametre Ekle"
                         >
                             <Plus size={16} />
@@ -633,7 +633,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
                     <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                     <span className="flex items-center gap-1.5"><Layers size={14} className="text-indigo-500"/> <b className="text-slate-800">{stats.panels}</b> Panel</span>
                     <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
-                    <span className="flex items-center gap-1.5"><Hash size={14} className="text-emerald-500"/> <b className="text-slate-800">{stats.numeric}</b> Sayısal</span>
+                    <span className="flex items-center gap-1.5"><Hash size={14} className="text-blue-500"/> <b className="text-slate-800">{stats.numeric}</b> Sayısal</span>
                     <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
                     <span className="flex items-center gap-1.5"><AlignLeft size={14} className="text-slate-500"/> <b className="text-slate-800">{stats.text}</b> Metin</span>
                 </div>
@@ -725,7 +725,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
 
                   <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
 
-                  <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 hover:text-emerald-600 bg-slate-100 hover:bg-emerald-50 rounded-lg transition-all" title="Test havuzunu JSON olarak dışa aktar">
+                  <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 rounded-lg transition-all" title="Test havuzunu JSON olarak dışa aktar">
                       <Download size={14} />
                   </button>
                   <button onClick={() => importFileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 rounded-lg transition-all" title="JSON dosyasından test havuzu içe aktar">

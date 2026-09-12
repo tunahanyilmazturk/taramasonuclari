@@ -26,13 +26,13 @@ export const RangeVisualizer: React.FC<RangeVisualizerProps> = memo(({ value, mi
 
   if (isAntiHbs) {
       if (value < min) pointColor = 'bg-red-500';
-      else pointColor = 'bg-green-500';
+      else pointColor = 'bg-emerald-500';
   } else {
       if (value > max) pointColor = 'bg-red-500';
       else if (value < min) pointColor = 'bg-orange-500';
   }
 
-  const isSafeRange = isAntiHbs ? 'bg-red-200/50' : 'bg-green-200/50';
+  const isSafeRange = isAntiHbs ? 'bg-red-200/50' : 'bg-emerald-200/50';
 
   return (
     <div className="mt-2 w-full max-w-[180px]">
@@ -89,7 +89,7 @@ export const TrendChart: React.FC<TrendChartProps> = memo(({ history, min, max, 
         <div className="flex flex-col gap-1 mt-2">
             <div className="relative h-[40px] w-full max-w-[200px] border-b border-l border-slate-200/50">
                 <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="overflow-visible">
-                    <rect x="0" y={yRefMax} width={width} height={Math.abs(yRefMin - yRefMax)} fill="currentColor" className="text-green-50 opacity-60" />
+                    <rect x="0" y={yRefMax} width={width} height={Math.abs(yRefMin - yRefMax)} fill="currentColor" className="text-emerald-50 opacity-60" />
                     <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" className="text-blue-500 vector-effect-non-scaling-stroke" />
                     {sorted.map((h, i) => {
                         const isAbnormal = h.value < min || h.value > max;
@@ -132,7 +132,7 @@ export const DistributionBar: React.FC<DistributionBarProps> = memo(({ high, low
         <div className="flex flex-col gap-1 w-full">
             <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-slate-100">
                 <div style={{ width: `${lowPct}%` }} className="bg-orange-400 hover:bg-orange-500 transition-colors" title={`Düşük: ${low}`} />
-                <div style={{ width: `${normalPct}%` }} className="bg-green-500 hover:bg-green-600 transition-colors" title={`Normal: ${normal}`} />
+                <div style={{ width: `${normalPct}%` }} className="bg-emerald-500 hover:bg-emerald-600 transition-colors" title={`Normal: ${normal}`} />
                 <div style={{ width: `${highPct}%` }} className="bg-red-500 hover:bg-red-600 transition-colors" title={`Yüksek: ${high}`} />
             </div>
             <div className="flex justify-between text-[10px] text-slate-400 px-1">
