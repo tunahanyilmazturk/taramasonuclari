@@ -260,3 +260,6 @@ export interface Notification {
   type: 'success' | 'error' | 'info';
   message: string;
 }
+// Ayarlar sayfası sekme kimlikleri — #/settings/<tab> rotaları için
+export const SETTINGS_TAB_IDS = ['system', 'org', 'appearance', 'ai', 'users', 'security', 'logs'] as const;
+export type SettingsTab = typeof SETTINGS_TAB_IDS[number];

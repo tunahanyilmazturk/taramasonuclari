@@ -11,8 +11,9 @@ const parseHash = (): string =>
     window.location.hash.replace(/^#\/?/, '').split('?')[0];
 
 export const resolveRoute = (hash: string, isSuperAdmin: boolean): AppRoute => {
-    if (!isSuperAdmin && ADMIN_ROUTES.includes(hash)) return DEFAULT_ROUTE;
-    return (APP_ROUTES as readonly string[]).includes(hash) ? (hash as AppRoute) : DEFAULT_ROUTE;
+    const base = hash.split('/')[0]; // alt rotalar (örn. quotes/quo_1) üst rotaya düşer
+    if (!isSuperAdmin && ADMIN_ROUTES.includes(base)) return DEFAULT_ROUTE;
+    return (APP_ROUTES as readonly string[]).includes(base) ? (base as AppRoute) : DEFAULT_ROUTE;
 };
 
 export const useHashRoute = () => {

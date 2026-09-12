@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Company, Screening, ScreeningStatus, TestDefinition } from '../../types';
 import { storageService } from '../../services/storageService';
 import { testCategory } from '../../constants';
@@ -56,6 +56,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests }) =
   const [statusFilter, setStatusFilter] = useState<'all' | ScreeningStatus>('all');
 
   const [formOpen, setFormOpen] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ScreeningForm>(emptyForm());
   const [formError, setFormError] = useState('');
@@ -102,12 +103,44 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests }) =
   }, [allTests, testSearch]);
 
   // ── Form işlemleri ──
+  /** Form açıkken taslağı localStorage'a yaz — sayfa yenilense bile korunur */
+  useEffect(() => {
+    if (formOpen) {
+      storageService.saveScreeningDraft({ form: { ...form, testIds: [...form.testIds] }, editingId });
+    }
+  }, [formOpen, form, editingId]);
+
   const openCreate = () => {
-    setEditingId(null);
-    setForm(emptyForm());
+    const draft = storageService.getScreeningDraft<{ form: Omit<ScreeningForm, 'testIds'> & { testIds: string[] }; editingId: string | null }>();
+    if (draft?.form) {
+      // Yarım kalan taslak varsa kaldığı yerden devam et
+      setForm({ ...draft.form, testIds: new Set(draft.form.testIds) });
+      setEditingId(draft.editingId ?? null);
+      setDraftRestored(true);
+    } else {
+      setEditingId(null);
+      setForm(emptyForm());
+      setDraftRestored(false);
+    }
     setFormError('');
     setTestSearch('');
     setFormOpen(true);
+  };
+
+  /** Formu kapat — taslak da temizlenir */
+  const closeForm = () => {
+    storageService.clearScreeningDraft();
+    setDraftRestored(false);
+    setFormOpen(false);
+  };
+
+  /** Taslağı sıfırla — geri yüklenen içeriği atıp temiz forma dön */
+  const resetDraft = () => {
+    storageService.clearScreeningDraft();
+    setEditingId(null);
+    setForm(emptyForm());
+    setFormError('');
+    setDraftRestored(false);
   };
 
   const openEdit = (s: Screening) => {
@@ -187,6 +220,8 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests }) =
         equipmentIds: []
       }]);
     }
+    storageService.clearScreeningDraft(); // taslak kaydedildi — temizle
+    setDraftRestored(false);
     setFormOpen(false);
   };
 
@@ -372,7 +407,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests }) =
       )}
 
       {/* ═══ TARAMA FORM MODALI ═══ */}
-      <Modal open={formOpen} onClose={() => setFormOpen(false)} overlayClassName="p-2 sm:p-4" closeOnBackdrop={false}>
+      <Modal open={formOpen} onClose={closeForm} overlayClassName="p-2 sm:p-4" closeOnBackdrop={false}>
         <div className={`${modalPanel} rounded-3xl w-full max-w-2xl max-h-[94vh] sm:max-h-[90vh] flex flex-col overflow-hidden`}>
 
           {/* Modal header */}
@@ -383,8 +418,14 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests }) =
                 <h3 className="text-base font-bold text-slate-900 truncate">{editingId ? form.title : 'Yeni Tarama'}</h3>
                 <p className="text-[11px] text-slate-500">{editingId ? 'Tarama detaylarını düzenleyin' : 'Mobil tarama operasyonu planlayın'}</p>
               </div>
+              {draftRestored && (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-[10px] font-bold text-amber-800 shrink-0">
+                  Taslak geri yüklendi
+                  <button onClick={resetDraft} className="underline underline-offset-2 hover:text-amber-950 transition-colors">Sıfırla</button>
+                </span>
+              )}
             </div>
-            <button onClick={() => setFormOpen(false)} className="p-2 hover:bg-slate-200/60 rounded-xl text-slate-400 hover:text-slate-700 transition-colors shrink-0"><X size={18}/></button>
+            <button onClick={closeForm} className="p-2 hover:bg-slate-200/60 rounded-xl text-slate-400 hover:text-slate-700 transition-colors shrink-0"><X size={18}/></button>
           </div>
 
           {/* Modal body */}
@@ -534,7 +575,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests }) =
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setFormOpen(false)} className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-200/60 rounded-xl transition-colors">İptal</button>
+              <button onClick={closeForm} className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-200/60 rounded-xl transition-colors">İptal</button>
               <button onClick={saveForm} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-200 active:scale-95">
                 <Save size={14}/> {editingId ? 'Kaydet' : 'Tarama Oluştur'}
               </button>

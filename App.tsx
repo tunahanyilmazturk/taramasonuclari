@@ -12,7 +12,7 @@ import { Quotes } from './components/modules/Quotes';
 import { Calendar } from './components/modules/Calendar';
 import { Equipment } from './components/modules/Equipment';
 import { Team } from './components/modules/Team';
-import { TestDefinition, PatientRecord, Company, AppState, Notification, User, OrgInfo } from './types';
+import { TestDefinition, PatientRecord, Company, AppState, Notification, User, OrgInfo, SettingsTab, SETTINGS_TAB_IDS } from './types';
 import { storageService } from './services/storageService';
 import { useHashRoute, resolveRoute } from './utils/router';
 import { DEFAULT_TESTS } from './constants';
@@ -30,9 +30,23 @@ function App() {
   const { hash, navigate } = useHashRoute();
   const activeTab = resolveRoute(hash, currentUser?.role === 'super_admin');
 
+  // Ayarlar alt sekmesi — #/settings/<tab> veya eski #/users, #/ai deep-link'leri
+  const settingsSub = hash.split('/')[1];
+  let settingsTab: SettingsTab | undefined =
+    activeTab === 'settings'
+      ? ((SETTINGS_TAB_IDS as readonly string[]).includes(settingsSub ?? '') ? settingsSub as SettingsTab : undefined)
+      : activeTab === 'users' ? 'users'
+      : activeTab === 'ai' ? 'ai'
+      : undefined;
+  if (settingsTab && (settingsTab === 'users' || settingsTab === 'logs') && currentUser?.role !== 'super_admin') {
+    settingsTab = undefined; // adminOnly sekmeler — yetkisiz deep-link'i engelle
+  }
+
   // Geçersiz veya yetkisiz URL'leri geçerli rotaya çevir (geçmişi kirletmeden)
+  // Alt rotalar (örn. #/quotes/quo_1) üst rota geçerliyse korunur
   useEffect(() => {
-    if (currentUser && hash && hash !== activeTab) {
+    const base = hash.split('/')[0];
+    if (currentUser && hash && base !== activeTab) {
       window.location.replace(`#/${activeTab}`);
     }
   }, [currentUser, hash, activeTab]);
@@ -325,11 +339,20 @@ function App() {
           }}
           onLoadDemo={handleLoadDemoData}
           onNavigate={navigate}
+          detailRecordId={activeTab === 'dashboard' ? hash.split('/')[1] : undefined}
         />
       )}
       
       {activeTab === 'screenings' && <Screenings companies={companies} allTests={masterTests} />}
-      {activeTab === 'quotes' && <Quotes companies={companies} allTests={masterTests} onGoToDashboard={() => navigate('dashboard')} />}
+      {activeTab === 'quotes' && (
+        <Quotes
+          companies={companies}
+          allTests={masterTests}
+          onGoToDashboard={() => navigate('dashboard')}
+          detailQuoteId={hash.startsWith('quotes/') ? hash.split('/')[1] : undefined}
+          onNavigate={navigate}
+        />
+      )}
       {activeTab === 'calendar' && <Calendar onGoToDashboard={() => navigate('dashboard')} />}
       {activeTab === 'equipment' && <Equipment onGoToDashboard={() => navigate('dashboard')} />}
       {activeTab === 'team' && <Team onGoToDashboard={() => navigate('dashboard')} />}
@@ -356,8 +379,8 @@ function App() {
       {/* Ayarlar — kullanıcılar, AI ve veri yönetimi tek çatı altında */}
       {(activeTab === 'settings' || activeTab === 'users' || activeTab === 'ai') && (
           <Settings
-             key={activeTab}
-             initialTab={activeTab === 'ai' ? 'ai' : activeTab === 'users' ? 'users' : undefined}
+             initialTab={settingsTab}
+             onNavigate={navigate}
              fullState={{
                  companies, tests: masterTests, records,
                  users: storageService.getUsers(),

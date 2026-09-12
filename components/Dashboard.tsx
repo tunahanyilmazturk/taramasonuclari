@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Company, PatientRecord, ResultStatus, ExtractedResult, TestDefinition } from '../types';
 import { storageService } from '../services/storageService';
 import { extractTextFromPdf } from '../services/pdfService';
@@ -37,6 +37,7 @@ interface DashboardProps {
   onUpdateCompanyTests: (companyId: string, tests: TestDefinition[]) => void;
   onLoadDemo: () => void;
   onNavigate?: (tab: string) => void; // modül bağlantıları (ör. yaklaşan taramalar → Taramalar)
+  detailRecordId?: string; // #/dashboard/<record-id> alt rotasından gelen kayıt kimliği
 }
 
 interface ManualForm {
@@ -69,20 +70,48 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onClearRecords,
   onUpdateCompanyTests,
   onLoadDemo,
-  onNavigate
+  onNavigate,
+  detailRecordId
 }) => {
+  // Yarım kalan sonuç-giriş sihirbazı taslağı — yenilemede seçimler korunur
+  // (yüklenen PDF dosyaları File nesnesi olduğu için saklanamaz; firma/tarama/test seçimi korunur)
+  const [initialWizard] = useState(() => {
+    try {
+      const d = JSON.parse(localStorage.getItem('mediscan_dashboard_wizard') || 'null');
+      return d && typeof d === 'object' ? d : null;
+    } catch { return null; }
+  });
+
   // Sayfa modu: overview = tüm sonuçları takip / workspace = firma bazlı sihirbaz
-  const [pageMode, setPageMode] = useState<'overview' | 'workspace'>('overview');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
-  const [selectedScreeningId, setSelectedScreeningId] = useState<string>(''); // '' = seçilmedi, 'free' = serbest giriş
-  const [selectedTestIds, setSelectedTestIds] = useState<Set<string>>(new Set());
-  const [wizardStep, setWizardStep] = useState<'setup' | 'input' | 'results'>('setup');
+  const [pageMode, setPageMode] = useState<'overview' | 'workspace'>(initialWizard?.pageMode === 'workspace' ? 'workspace' : 'overview');
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>(initialWizard?.companyId ?? '');
+  const [selectedScreeningId, setSelectedScreeningId] = useState<string>(initialWizard?.screeningId ?? ''); // '' = seçilmedi, 'free' = serbest giriş
+  const [selectedTestIds, setSelectedTestIds] = useState<Set<string>>(new Set(initialWizard?.testIds ?? []));
+  const [wizardStep, setWizardStep] = useState<'setup' | 'input' | 'results'>(initialWizard?.step === 'input' ? 'input' : 'setup');
+
+  // Sihirbaz seçimlerini localStorage'a yaz — sayfa yenilense bile korunur
+  useEffect(() => {
+    if (pageMode === 'workspace' && selectedCompanyId) {
+      localStorage.setItem('mediscan_dashboard_wizard', JSON.stringify({
+        pageMode, step: wizardStep === 'results' ? 'input' : wizardStep,
+        companyId: selectedCompanyId, screeningId: selectedScreeningId, testIds: [...selectedTestIds]
+      }));
+    } else {
+      localStorage.removeItem('mediscan_dashboard_wizard');
+    }
+  }, [pageMode, wizardStep, selectedCompanyId, selectedScreeningId, selectedTestIds]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState({ current: 0, total: 0, currentFile: '' });
   const [batchErrors, setBatchErrors] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  const [viewMode, setViewMode] = useState<'list' | 'analytics'>('list');
+  // Görünüm modu tercihi localStorage'da saklanır — yenilemede korunur
+  const [viewMode, setViewModeState] = useState<'list' | 'analytics'>(() =>
+    localStorage.getItem('mediscan_dashboard_view') === 'analytics' ? 'analytics' : 'list');
+  const setViewMode = (mode: 'list' | 'analytics') => {
+    setViewModeState(mode);
+    localStorage.setItem('mediscan_dashboard_view', mode);
+  };
   const [isCompact, setIsCompact] = useState(false);
   const [selectedAnalyticsTestId, setSelectedAnalyticsTestId] = useState<string>('');
 
@@ -104,7 +133,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  const [viewingRecord, setViewingRecord] = useState<PatientRecord | null>(null);
+  // Hasta detayı URL'den türetilir (#/dashboard/<id>) — yenilemede/paylaşımda korunur
+  const [localRecordId, setLocalRecordId] = useState<string | null>(null); // onNavigate yoksa yedek
+  const viewingRecordId = detailRecordId ?? localRecordId;
+  const viewingRecord = useMemo(
+    () => viewingRecordId ? records.find(r => r.id === viewingRecordId) ?? null : null,
+    [viewingRecordId, records]
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,7 +177,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const selectedTestCount = selectedTests.length;
 
   // Firma değiştiğinde tarama/test seçimini sıfırla (render-time derived state)
-  const [prevCompanyId, setPrevCompanyId] = useState<string>('');
+  // Not: ilk değer taslaktan gelir — mount'ta geri yüklenen seçimlerin silinmesini engeller
+  const [prevCompanyId, setPrevCompanyId] = useState<string>(initialWizard?.companyId ?? '');
   if (selectedCompanyId !== prevCompanyId) {
       setPrevCompanyId(selectedCompanyId);
       setSelectedScreeningId('');
@@ -715,17 +751,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const openPatientModal = (record: PatientRecord) => {
-      setViewingRecord(record);
+      if (onNavigate) onNavigate(`dashboard/${record.id}`);
+      else setLocalRecordId(record.id);
+  };
+
+  /** Hasta modalında önceki/sonraki gezinme + kapatma — URL'yi günceller */
+  const navigateRecord = (record: PatientRecord | null) => {
+      if (!record) {
+          setLocalRecordId(null);
+          onNavigate?.('dashboard');
+      } else if (onNavigate) {
+          onNavigate(`dashboard/${record.id}`);
+      } else {
+          setLocalRecordId(record.id);
+      }
   };
 
   const handleUpdateAndView = (updated: PatientRecord) => {
-      onUpdateRecord(updated);
-      setViewingRecord(updated);
+      onUpdateRecord(updated); // kayıtlar üst state'te — modal URL'den türediği için otomatik güncellenir
   };
 
   const handleToggleReviewSynced = (id: string) => {
       onToggleReview(id);
-      setViewingRecord(prev => prev && prev.id === id ? { ...prev, isReviewed: !prev.isReviewed } : prev);
   };
 
   const startEditing = (record: PatientRecord, testId: string, currentValue?: ExtractedResult) => {
@@ -1489,9 +1536,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
           orderedRecords={viewingCompanyRecords}
           onUpdateRecord={handleUpdateAndView}
           onToggleReview={handleToggleReviewSynced}
-          onNavigate={setViewingRecord}
-          onClose={() => setViewingRecord(null)}
+          onNavigate={navigateRecord}
+          onClose={() => navigateRecord(null)}
         />
+      )}
+
+      {viewingRecordId && !viewingRecord && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-3">
+          <AlertTriangle size={28} className="mx-auto text-amber-500" />
+          <p className="text-sm font-bold text-slate-700">Kayıt bulunamadı</p>
+          <p className="text-xs text-slate-400">Bu sonuç kaydı silinmiş olabilir.</p>
+          <button onClick={() => navigateRecord(null)} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
+            Sonuçlara Dön
+          </button>
+        </div>
       )}
 
       <DashboardModals

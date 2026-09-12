@@ -16,7 +16,9 @@ const KEYS = {
   EQUIPMENT: 'mediscan_equipment',
   TEAM: 'mediscan_team',
   ORG_INFO: 'mediscan_org_info',
-  APPEARANCE: 'mediscan_appearance'
+  APPEARANCE: 'mediscan_appearance',
+  QUOTE_DRAFT: 'mediscan_quote_draft',
+  SCREENING_DRAFT: 'mediscan_screening_draft'
 };
 
 export const DEFAULT_REPORT_SETTINGS: ReportSettings = {
@@ -137,6 +139,21 @@ export const storageService = {
     const data = localStorage.getItem(KEYS.QUOTES);
     return data ? JSON.parse(data) : [];
   },
+
+  // --- FORM TASLAKLARI (sayfa yenilense bile sihirbaz/form içeriği korunur) ---
+  saveQuoteDraft: <T>(draft: T) => localStorage.setItem(KEYS.QUOTE_DRAFT, JSON.stringify(draft)),
+  getQuoteDraft: <T>(): T | null => {
+    const data = localStorage.getItem(KEYS.QUOTE_DRAFT);
+    try { return data ? JSON.parse(data) as T : null; } catch { return null; }
+  },
+  clearQuoteDraft: () => localStorage.removeItem(KEYS.QUOTE_DRAFT),
+
+  saveScreeningDraft: <T>(draft: T) => localStorage.setItem(KEYS.SCREENING_DRAFT, JSON.stringify(draft)),
+  getScreeningDraft: <T>(): T | null => {
+    const data = localStorage.getItem(KEYS.SCREENING_DRAFT);
+    try { return data ? JSON.parse(data) as T : null; } catch { return null; }
+  },
+  clearScreeningDraft: () => localStorage.removeItem(KEYS.SCREENING_DRAFT),
 
   saveEvents: (items: CalendarEvent[]) => localStorage.setItem(KEYS.EVENTS, JSON.stringify(items)),
   getEvents: (): CalendarEvent[] => {

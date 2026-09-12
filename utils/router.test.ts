@@ -27,4 +27,21 @@ describe('resolveRoute', () => {
         expect(resolveRoute('users', true)).toBe('users');
         expect(resolveRoute('ai', true)).toBe('ai');
     });
+
+    it('alt rotalar üst rotaya düşer (örn. teklif detayı)', () => {
+        expect(resolveRoute('quotes/quo_1', false)).toBe('quotes');
+        expect(resolveRoute('quotes/quo_1', true)).toBe('quotes');
+        expect(resolveRoute('companies/comp_9', false)).toBe('companies');
+    });
+
+    it('settings alt sekmeleri settings rotasına düşer', () => {
+        expect(resolveRoute('settings/org', false)).toBe('settings');
+        expect(resolveRoute('settings/users', false)).toBe('settings');
+        expect(resolveRoute('settings/logs', true)).toBe('settings');
+    });
+
+    it('dashboard kayıt detayı dashboard rotasına düşer', () => {
+        expect(resolveRoute('dashboard/rec_123', false)).toBe('dashboard');
+        expect(resolveRoute('dashboard/rec_123', true)).toBe('dashboard');
+    });
 });

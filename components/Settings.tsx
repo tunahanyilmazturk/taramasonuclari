@@ -6,14 +6,12 @@ import {
   Lock, Key, Search, Cpu, Activity, UserCircle, FileSignature, Stethoscope, Save,
   Sparkles, Users, Building2, Palette, Sun, Moon, Monitor, Type, Zap, PanelLeftClose, Rows3
 } from 'lucide-react';
-import { AppState, User, AuditLog, ReportSettings, OrgInfo, AppearanceSettings } from '../types';
+import { AppState, User, AuditLog, ReportSettings, OrgInfo, AppearanceSettings, SettingsTab } from '../types';
 import { storageService } from '../services/storageService';
 import { updateAppearance, ACCENTS } from '../services/appearance';
 import { hashPassword } from '../utils/security';
 import { AiSettings } from './AiSettings';
 import { UserManager } from './UserManager';
-
-type SettingsTab = 'system' | 'org' | 'appearance' | 'ai' | 'users' | 'security' | 'logs';
 
 interface SettingsProps {
   fullState: AppState;
@@ -21,19 +19,22 @@ interface SettingsProps {
   onReset: () => void;
   onLoadDemo: () => void;
   addNotification: (type: 'success' | 'error' | 'info', message: string) => void;
-  initialTab?: SettingsTab; // eski #/users, #/ai gibi deep-link'ler için başlangıç sekmesi
+  initialTab?: SettingsTab; // #/settings/<tab> veya eski #/users, #/ai deep-link'lerinden gelen sekme
+  onNavigate?: (route: string) => void;
   onOrgSaved?: (org: OrgInfo) => void; // kurum bilgisi kaydedilince Layout'un canlı güncellenmesi için
 }
 
-export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onReset, onLoadDemo, addNotification, initialTab, onOrgSaved }) => {
+export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onReset, onLoadDemo, addNotification, initialTab, onNavigate, onOrgSaved }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetConfirmationText, setResetConfirmationText] = useState('');
-  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab ?? 'system');
-  
+  // Sekme URL'den kontrol edilir (initialTab) — yoksa iç state'e düşer
+  const [internalTab, setInternalTab] = useState<SettingsTab>(initialTab ?? 'system');
+  const activeTab = initialTab ?? internalTab;
+
   // Auth & Logs
   const [currentUser, setCurrentUser] = useState<User | null>(storageService.getCurrentUser());
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => (initialTab === 'logs' ? storageService.getLogs() : []));
   const [logSearch, setLogSearch] = useState('');
 
   // Password Change State
@@ -60,10 +61,11 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
   };
 
   const handleTabChange = (tab: SettingsTab) => {
-      setActiveTab(tab);
+      setInternalTab(tab);
       if (tab === 'logs') {
           setAuditLogs(storageService.getLogs());
       }
+      onNavigate?.(`settings/${tab}`); // sekmeyi URL'ye yansıt — yenilemede/paylaşımda korunur
   };
 
   // --- STORAGE CALCULATION ---

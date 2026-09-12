@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Company, Quote, QuoteItem, QuoteStatus, QuoteType, TestDefinition } from '../../types';
 import { storageService } from '../../services/storageService';
 import { testPrice, testCategory, TEST_CATEGORIES } from '../../constants';
@@ -8,13 +8,15 @@ import {
   FileText, Plus, Search, Copy, Trash2, Edit2, Printer, Send, CheckCircle2,
   XCircle, X, Calculator, Building2, CalendarDays, ArrowLeft, ArrowRight,
   RotateCcw, Stethoscope, Check, Users as UsersIcon, FlaskConical, Factory, ClipboardList,
-  ChevronUp, ChevronDown, ScrollText, ListChecks, AlertTriangle, Eye
+  ChevronUp, ChevronDown, ScrollText, ListChecks, AlertTriangle, Eye, Download, Sparkles
 } from 'lucide-react';
 
 interface QuotesProps {
   companies: Company[];
   allTests: TestDefinition[];
   onGoToDashboard?: () => void;
+  detailQuoteId?: string;   // #/quotes/<id> alt rotasından gelen teklif kimliği
+  onNavigate?: (route: string) => void;
 }
 
 const STATUS_META: Record<QuoteStatus, { label: string; badge: string; dot: string }> = {
@@ -60,6 +62,9 @@ const totalOf = (q: Quote) => calcTotals(q.items, q.discountRate, q.vatRate, q.d
 
 /** Bugünden itibaren N gün sonrasının ISO tarihi — geçerlilik hızlı çipleri için */
 const datePlusDays = (days: number) => new Date(Date.now() + days * 86400000).toISOString().split('T')[0];
+
+const newQuoteId = () => `quo_${Date.now()}`;
+const todayIso = () => new Date().toISOString().split('T')[0];
 
 /** Tarihe kalan gün sayısı (negatifse 0) */
 const daysUntil = (dateStr: string) => Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000));
@@ -398,7 +403,7 @@ const QuoteDocument: React.FC<{ quote: Pick<Quote, 'quoteNumber' | 'title' | 'co
   );
 };
 
-export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashboard }) => {
+export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashboard, detailQuoteId, onNavigate }) => {
   const [quotes, setQuotes] = useState<Quote[]>(() => storageService.getQuotes());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | QuoteStatus | 'expired'>('all');
@@ -406,7 +411,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
   const [sortBy, setSortBy] = useState<'new' | 'amount_desc' | 'amount_asc' | 'validity'>('new');
 
   // Liste ↔ Sihirbaz ↔ Detay görünümü
-  const [view, setView] = useState<'list' | 'wizard' | 'detail'>('list');
+  const [view, setView] = useState<'list' | 'wizard'>('list');
   const [wizardStep, setWizardStep] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<QuoteForm | null>(null);
@@ -418,10 +423,23 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
   const [letterCopied, setLetterCopied] = useState(false);
   const [termSearch, setTermSearch] = useState('');
 
-  const [viewingQuote, setViewingQuote] = useState<Quote | null>(null);
+  // Detay görünümü URL'den türetilir — #/quotes/<id> refresh'te de korunur.
+  // onNavigate bağlı değilse yerel state'e düşer (yedek mod).
+  const [localDetailId, setLocalDetailId] = useState<string | null>(null);
+  const activeDetailId = detailQuoteId ?? localDetailId;
+  const detailQuote = activeDetailId ? (quotes.find(q => q.id === activeDetailId) ?? null) : null;
+  const showDetail = activeDetailId != null;
   const [detailTab, setDetailTab] = useState<'doc' | 'items'>('doc');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClone, setConfirmClone] = useState<Quote | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false); // sihirbaz taslağı geri yüklendi bilgisi
+
+  // Sihirbaz taslağını localStorage'a sürekli yaz — sayfa yenilense bile form korunur
+  useEffect(() => {
+    if (view === 'wizard' && form) {
+      storageService.saveQuoteDraft({ form, wizardStep, editingId });
+    }
+  }, [view, form, wizardStep, editingId]);
 
   const persist = (next: Quote[]) => {
     setQuotes(next);
@@ -490,13 +508,42 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
 
   // ── Sihirbaz ──
   const openCreate = () => {
-    setEditingId(null);
-    setForm(emptyForm(nextQuoteNumber()));
+    const draft = storageService.getQuoteDraft<{ form: QuoteForm; wizardStep: number; editingId: string | null }>();
+    if (draft?.form) {
+      // Yarım kalan taslak varsa kaldığı yerden devam et
+      setForm(draft.form);
+      setEditingId(draft.editingId ?? null);
+      setWizardStep(draft.wizardStep || 1);
+      setDraftRestored(true);
+    } else {
+      setEditingId(null);
+      setForm(emptyForm(nextQuoteNumber()));
+      setWizardStep(1);
+      setDraftRestored(false);
+    }
     setFormError('');
     setItemSearch('');
     setCategoryFilter('all');
-    setWizardStep(1);
     setView('wizard');
+    setLocalDetailId(null);
+    onNavigate?.('quotes');
+  };
+
+  /** Taslağı sıfırla — geri yüklenen taslağı atıp temiz form aç */
+  const resetDraft = () => {
+    storageService.clearQuoteDraft();
+    setEditingId(null);
+    setForm(emptyForm(nextQuoteNumber()));
+    setWizardStep(1);
+    setFormError('');
+    setDraftRestored(false);
+  };
+
+  /** Sihirbazdan çık — taslak da temizlenir */
+  const closeWizard = () => {
+    storageService.clearQuoteDraft();
+    setDraftRestored(false);
+    setView('list');
   };
 
   const openEdit = (quote: Quote) => {
@@ -525,6 +572,8 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     setCategoryFilter('all');
     setWizardStep(3); // düzenlemede direkt fiyatlandırmaya git
     setView('wizard');
+    setLocalDetailId(null);
+    onNavigate?.('quotes');
   };
 
   const canProceed = (): boolean => {
@@ -710,8 +759,8 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
       quoteType: form.quoteType,
       title: form.title.trim() || undefined,
       createdAt: editingId
-        ? (quotes.find(q => q.id === editingId)?.createdAt ?? new Date().toISOString().split('T')[0])
-        : new Date().toISOString().split('T')[0],
+        ? (quotes.find(q => q.id === editingId)?.createdAt ?? todayIso())
+        : todayIso(),
       validUntil: form.validUntil,
       status: editingId ? (quotes.find(q => q.id === editingId)?.status ?? 'taslak') : 'taslak',
       items: form.items.map(i => ({ ...i, name: i.name.trim() })),
@@ -730,37 +779,35 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
       saved = { ...base, id: editingId };
       persist(quotes.map(q => q.id === editingId ? saved : q));
     } else {
-      saved = { ...base, id: `quo_${Date.now()}` };
+      saved = { ...base, id: newQuoteId() };
       persist([...quotes, saved]);
     }
-    setDetailTab('doc');
-    setView('detail');
-    setViewingQuote(saved); // kaydedilen teklifin detay sayfasını aç
+    storageService.clearQuoteDraft(); // taslak artık kaydedildi — temizle
+    setDraftRestored(false);
+    openDetail(saved); // kaydedilen teklifin detay sayfasını aç (URL: #/quotes/<id>)
   };
 
-  /** Detay sayfasını aç */
+  /** Detay sayfasını aç + URL'yi güncelle */
   const openDetail = (quote: Quote) => {
-    setViewingQuote(quote);
     setDetailTab('doc');
-    setView('detail');
+    if (onNavigate) onNavigate(`quotes/${quote.id}`);
+    else setLocalDetailId(quote.id);
   };
 
   /** Detaydan listeye dön */
   const closeDetail = () => {
-    setViewingQuote(null);
-    setView('list');
+    setLocalDetailId(null);
+    onNavigate?.('quotes');
   };
 
   const setStatus = (id: string, status: QuoteStatus) => {
-    const next = quotes.map(q => q.id === id ? { ...q, status } : q);
-    persist(next);
-    setViewingQuote(prev => prev && prev.id === id ? { ...prev, status } : prev);
+    persist(quotes.map(q => q.id === id ? { ...q, status } : q));
   };
 
   const doDelete = () => {
     if (!confirmDelete) return;
     persist(quotes.filter(q => q.id !== confirmDelete));
-    if (viewingQuote?.id === confirmDelete) closeDetail();
+    if (activeDetailId === confirmDelete) closeDetail();
     setConfirmDelete(null);
   };
 
@@ -768,9 +815,9 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     if (!confirmClone) return;
     const cloned: Quote = {
       ...confirmClone,
-      id: `quo_${Date.now()}`,
+      id: newQuoteId(),
       quoteNumber: nextQuoteNumber(),
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: todayIso(),
       status: 'taslak',
       items: confirmClone.items.map(i => ({ ...i, id: newItemId() }))
     };
@@ -834,7 +881,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     <div className="space-y-6 pb-16 animate-in fade-in duration-300">
 
       {/* ══════════════ LİSTE GÖRÜNÜMÜ ══════════════ */}
-      {view === 'list' && (
+      {!showDetail && view === 'list' && (
         <>
           {/* Başlık */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1040,14 +1087,21 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
       )}
 
       {/* ══════════════ TEKLİF SİHİRBAZI ══════════════ */}
-      {view === 'wizard' && form && (
+      {!showDetail && view === 'wizard' && form && (
         <div className="flex flex-col lg:flex-row gap-6 items-start">
 
           {/* ── SOL SIDEBAR: ADIMLAR ── */}
           <aside className="w-full lg:w-72 shrink-0 lg:sticky lg:top-24 space-y-4">
-            <button onClick={() => setView('list')} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-600 transition-colors">
+            <button onClick={closeWizard} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-emerald-600 transition-colors">
               <ArrowLeft size={14} /> Tekliflere Dön
             </button>
+
+            {draftRestored && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl text-[11px] font-bold text-amber-800">
+                <span className="flex items-center gap-1.5"><Sparkles size={12} /> Taslak geri yüklendi</span>
+                <button onClick={resetDraft} className="underline underline-offset-2 hover:text-amber-950 transition-colors">Sıfırla</button>
+              </div>
+            )}
 
             {/* Adım listesi — mobilde yatay, masaüstünde dikey */}
             <div className="bg-white rounded-2xl border border-slate-200 p-2 lg:p-3 flex lg:flex-col gap-1.5 overflow-x-auto scrollbar-none">
@@ -2043,7 +2097,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
           <div className="sticky bottom-3 z-30 pt-2">
             <div className="flex items-center justify-between gap-3 bg-white/95 backdrop-blur border border-slate-200 rounded-2xl px-2.5 py-2 shadow-xl shadow-slate-200/70">
               <button
-                onClick={wizardStep === 1 ? () => setView('list') : goBack}
+                onClick={wizardStep === 1 ? closeWizard : goBack}
                 className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
               >
                 <ArrowLeft size={14} /> {wizardStep === 1 ? 'Vazgeç' : 'Geri'}
@@ -2086,9 +2140,17 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
         </div>
       )}
 
-      {/* ═══ TEKLİF DETAY SAYFASI ═══ */}
-      {view === 'detail' && viewingQuote && (() => {
-        const vq = viewingQuote;
+      {/* ═══ TEKLİF DETAY SAYFASI — #/quotes/<id> ═══ */}
+      {showDetail && !detailQuote && (
+        <div className="max-w-md mx-auto mt-16 bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-sm animate-in fade-in duration-300">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center"><AlertTriangle size={22}/></div>
+          <h2 className="text-base font-black text-slate-800">Teklif Bulunamadı</h2>
+          <p className="text-xs text-slate-500 mt-1.5 mb-5">Bu teklif silinmiş veya bağlantı hatalı olabilir.</p>
+          <button onClick={closeDetail} className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors"><ArrowLeft size={14}/> Teklif Listesine Dön</button>
+        </div>
+      )}
+      {showDetail && detailQuote && (() => {
+        const vq = detailQuote;
         const vqCompany = companyOf(vq.companyId);
         const vqTotals = calcTotals(vq.items, vq.discountRate, vq.vatRate, vq.discountType ?? 'percent');
         const vqExpired = isExpired(vq);
@@ -2157,7 +2219,9 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 <span className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
                 <button onClick={() => openEdit(vq)} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors"><Edit2 size={12}/> Düzenle</button>
                 <button onClick={() => setConfirmClone(vq)} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-colors"><Copy size={12}/> Kopyala</button>
-                <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold text-white bg-slate-800 hover:bg-slate-900 rounded-xl transition-colors shadow-sm"><Printer size={12}/> Yazdır / PDF</button>
+                <button onClick={() => window.print()} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 rounded-xl transition-colors"><Printer size={12}/> Yazdır</button>
+                <button onClick={() => import('../../services/quotePdfService').then(m => m.previewQuotePdf(vq, vqCompany))} className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-xl transition-colors"><Eye size={12}/> Önizle</button>
+                <button onClick={() => import('../../services/quotePdfService').then(m => m.downloadQuotePdf(vq, vqCompany))} className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors shadow-md shadow-emerald-200"><Download size={12}/> PDF İndir</button>
                 <button onClick={() => setConfirmDelete(vq.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 border border-slate-200 hover:border-red-200 bg-white rounded-xl transition-colors" title="Sil"><Trash2 size={13}/></button>
               </div>
             </div>
