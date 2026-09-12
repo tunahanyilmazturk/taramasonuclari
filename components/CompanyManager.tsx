@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { Company, PatientRecord, HazardClass, TestDefinition } from '../types';
+import { Company, PatientRecord, HazardClass, TestDefinition, Screening, Quote, ScreeningStatus, QuoteStatus } from '../types';
 import { testCategory } from '../constants';
+import { isAbnormalStatus } from '../utils/lab';
+import { storageService } from '../services/storageService';
 import { ConfirmModal } from './ConfirmModal';
 import { Modal, modalPanel } from './Modal';
 import {
   Building2, Plus, Save, Trash2, Search, Copy,
   User, FileText, FlaskConical, Check,
   Phone, Users as UsersIcon, Factory, AlertTriangle,
-  Edit2, StickyNote, X
+  Edit2, StickyNote, X, ArrowLeft, CalendarDays, Mail, MapPin,
+  Stethoscope, ChevronRight, Activity, ClipboardList, Eye, CheckCircle2, Clock
 } from 'lucide-react';
 
 const emptyCompanyForm = (): Partial<Company> => ({
@@ -44,21 +47,72 @@ const HAZARD_CLASSES: Record<HazardClass, { label: string; badge: string; dot: s
     }
 };
 
+// ─── Firma detay sekmeleri (#/companies/<id>/<sekme>) ───
+type CompanyTab = 'genel' | 'taramalar' | 'teklifler' | 'sonuclar' | 'sablon';
+const COMPANY_TAB_IDS: readonly string[] = ['genel', 'taramalar', 'teklifler', 'sonuclar', 'sablon'];
+
+const SCR_STATUS: Record<ScreeningStatus, { label: string; badge: string }> = {
+    planlandi:    { label: 'Planlandı',    badge: 'bg-blue-50 text-blue-600 border-blue-200' },
+    devam_ediyor: { label: 'Devam Ediyor', badge: 'bg-amber-50 text-amber-700 border-amber-200' },
+    tamamlandi:   { label: 'Tamamlandı',   badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    iptal:        { label: 'İptal',        badge: 'bg-slate-100 text-slate-500 border-slate-200' }
+};
+
+const QUOTE_STATUS: Record<QuoteStatus, { label: string; badge: string; dot: string }> = {
+    taslak:     { label: 'Taslak',     badge: 'bg-slate-100 text-slate-600 border-slate-200',   dot: 'bg-slate-400' },
+    gonderildi: { label: 'Gönderildi', badge: 'bg-blue-50 text-blue-700 border-blue-200',       dot: 'bg-blue-500' },
+    onaylandi:  { label: 'Onaylandı',  badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+    reddedildi: { label: 'Reddedildi', badge: 'bg-red-50 text-red-600 border-red-200',          dot: 'bg-red-500' }
+};
+
+const fmtMoney = (n: number) =>
+    new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(n);
+
+const fmtDate = (iso: string) => {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? iso : d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const quoteTotal = (q: Quote) => {
+    const sub = q.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+    const disc = q.discountType === 'amount' ? q.discountRate : sub * q.discountRate / 100;
+    return (sub - disc) * (1 + q.vatRate / 100);
+};
+
+const isQuoteExpired = (q: Quote) => q.status === 'gonderildi' && q.validUntil < new Date().toISOString().slice(0, 10);
+
 interface CompanyManagerProps {
   companies: Company[];
   records?: PatientRecord[];
   allTests?: TestDefinition[];
   onUpdateCompanies: (companies: Company[]) => void;
+  detailCompanyId?: string; // #/companies/<id> alt rotasından gelen firma kimliği
+  detailTab?: string;       // #/companies/<id>/<sekme> üçüncü segment
+  onNavigate?: (route: string) => void;
+  onBack?: (fallback: string) => void; // uygulama içi geri — önceki sayfaya döner
 }
 
 export const CompanyManager: React.FC<CompanyManagerProps> = ({
   companies,
   records = [],
   allTests = [],
-  onUpdateCompanies
+  onUpdateCompanies,
+  detailCompanyId,
+  detailTab,
+  onNavigate,
+  onBack
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [hazardFilter, setHazardFilter] = useState<'all' | HazardClass>('all');
+
+  // ── Firma detayı — URL'den türetilir (#/companies/<id>/<sekme>) ──
+  const [localDetailId, setLocalDetailId] = useState<string | null>(null); // onNavigate yoksa yedek
+  const [localTab, setLocalTab] = useState<CompanyTab>('genel');
+  const activeDetailId = detailCompanyId ?? localDetailId;
+  const detailCompany = activeDetailId ? companies.find(c => c.id === activeDetailId) ?? null : null;
+  const activeDetailTab: CompanyTab = (COMPANY_TAB_IDS as readonly string[]).includes(detailTab ?? '')
+    ? detailTab as CompanyTab
+    : localTab;
 
   // Form modal state
   const [formOpen, setFormOpen] = useState(false);
@@ -91,6 +145,88 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
   }, [companies, searchTerm, hazardFilter]);
 
   const recordCountOf = (companyId: string) => records.filter(r => r.companyId === companyId).length;
+
+  // ── Detay navigasyonu ──
+  const openDetail = (company: Company) => {
+      setLocalTab('genel');
+      if (onNavigate) onNavigate(`companies/${company.id}`);
+      else setLocalDetailId(company.id);
+  };
+
+  /** Detaydan geri dön — önceki sayfaya gider, yoksa listeye düşer */
+  const closeDetail = () => {
+      setLocalDetailId(null);
+      if (onBack) onBack('companies');
+      else onNavigate?.('companies');
+  };
+
+  const setDetailTab = (tab: CompanyTab) => {
+      setLocalTab(tab);
+      if (onNavigate && activeDetailId) onNavigate(`companies/${activeDetailId}/${tab}`);
+  };
+
+  // ── Detay verileri (firma seçiliyken hesaplanır) ──
+  const companyScreenings = useMemo<Screening[]>(() =>
+      detailCompany
+        ? storageService.getScreenings()
+            .filter(s => s.companyId === detailCompany.id)
+            .sort((a, b) => b.date.localeCompare(a.date))
+        : [],
+  [detailCompany]);
+
+  const companyQuotes = useMemo<Quote[]>(() =>
+      detailCompany
+        ? storageService.getQuotes()
+            .filter(q => q.companyId === detailCompany.id)
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        : [],
+  [detailCompany]);
+
+  const companyRecords = useMemo(() =>
+      detailCompany
+        ? records.filter(r => r.companyId === detailCompany.id).sort((a, b) => b.date.localeCompare(a.date))
+        : [],
+  [detailCompany, records]);
+
+  const detailStats = useMemo(() => {
+      const today = new Date().toISOString().slice(0, 10);
+      const reviewed = companyRecords.filter(r => r.isReviewed).length;
+      const anomalies = companyRecords.filter(r => Object.values(r.status).some(isAbnormalStatus)).length;
+      const upcoming = companyScreenings.find(s => (s.status === 'planlandi' || s.status === 'devam_ediyor') && s.date >= today);
+      const openQuotes = companyQuotes.filter(q => q.status === 'gonderildi' || q.status === 'taslak').length;
+      return {
+          reviewedPct: companyRecords.length ? Math.round(reviewed / companyRecords.length * 100) : 0,
+          anomalies, upcoming, openQuotes,
+          totalRevenue: companyQuotes.filter(q => q.status === 'onaylandi').reduce((s, q) => s + quoteTotal(q), 0)
+      };
+  }, [companyRecords, companyScreenings, companyQuotes]);
+
+  /** Sekme rozet sayıları */
+  const tabCounts = useMemo(() => ({
+      taramalar: companyScreenings.length,
+      teklifler: companyQuotes.length,
+      sonuclar: companyRecords.length,
+      sablon: detailCompany?.tests.length ?? 0
+  }), [companyScreenings, companyQuotes, companyRecords, detailCompany]);
+
+  /** Birleşik aktivite akışı — genel sekmesi */
+  const activityFeed = useMemo(() => {
+      const items: { key: string; date: string; text: string; sub: string; chip: string }[] = [
+          ...companyScreenings.map(s => ({
+              key: `scr-${s.id}`, date: s.date, text: s.title,
+              sub: `Tarama · ${SCR_STATUS[s.status].label}`, chip: 'bg-blue-50 text-blue-600'
+          })),
+          ...companyQuotes.map(q => ({
+              key: `quo-${q.id}`, date: q.createdAt, text: q.quoteNumber,
+              sub: `Teklif · ${QUOTE_STATUS[q.status].label} · ${fmtMoney(quoteTotal(q))}`, chip: 'bg-emerald-50 text-emerald-600'
+          })),
+          ...companyRecords.map(r => ({
+              key: `rec-${r.id}`, date: r.date, text: r.patientName,
+              sub: `Sonuç · ${Object.keys(r.results).length} test${r.isReviewed ? ' · İncelendi' : ''}`, chip: 'bg-indigo-50 text-indigo-600'
+          }))
+      ];
+      return items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  }, [companyScreenings, companyQuotes, companyRecords]);
 
   // ── Form ──
   const openCreate = () => {
@@ -151,6 +287,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
     if (!confirmDelete) return;
     onUpdateCompanies(companies.filter(c => c.id !== confirmDelete));
     if (editingId === confirmDelete) setFormOpen(false);
+    if (activeDetailId === confirmDelete) closeDetail();
     setConfirmDelete(null);
   };
 
@@ -181,6 +318,419 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
   return (
     <div className="space-y-6 pb-16 animate-in fade-in duration-300">
 
+      {/* ══════════════ FİRMA DETAYI ══════════════ */}
+      {activeDetailId && (
+        detailCompany ? (
+          (() => {
+            const hazard = detailCompany.hazardClass ? HAZARD_CLASSES[detailCompany.hazardClass] : null;
+            return (
+          <>
+          {/* Üst bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button onClick={closeDetail} className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 transition-colors">
+              <ArrowLeft size={15} /> Firmalara Dön
+            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => onNavigate?.('quotes')} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700 rounded-xl transition-colors">
+                <FileText size={13} /> Yeni Teklif
+              </button>
+              <button onClick={() => onNavigate?.('screenings')} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
+                <Stethoscope size={13} /> Yeni Tarama
+              </button>
+              <span className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
+              <button onClick={() => openEdit(detailCompany)} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-slate-900 text-white hover:bg-slate-700 rounded-xl transition-colors">
+                <Edit2 size={13} /> Düzenle
+              </button>
+              <button onClick={() => setConfirmClone(detailCompany)} className="p-2 text-xs font-bold bg-white border border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors" title="Kopyala"><Copy size={14} /></button>
+              <button onClick={() => setConfirmDelete(detailCompany.id)} className="p-2 text-xs font-bold bg-white border border-slate-200 text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200 rounded-xl transition-colors" title="Sil"><Trash2 size={14} /></button>
+            </div>
+          </div>
+
+          {/* ── Firma Kartı ── */}
+          <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
+            <div className="absolute -right-16 -top-16 w-56 h-56 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute -left-10 -bottom-20 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="relative flex flex-col lg:flex-row lg:items-center gap-5">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-xl font-black text-white shadow-lg shrink-0 ${hazard?.avatar ?? 'bg-blue-600'}`}>
+                  {detailCompany.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl font-black truncate">{detailCompany.name}</h2>
+                    {hazard && (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-white/10 border border-white/15 text-slate-200 whitespace-nowrap">
+                        {hazard.label}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-400 text-xs mt-1 flex items-center gap-1.5">
+                    <Factory size={11} className="shrink-0" />
+                    {detailCompany.sector || 'Sektör belirtilmemiş'}
+                    {detailCompany.employeeCount !== undefined && ` · ${detailCompany.employeeCount} çalışan`}
+                  </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-slate-300">
+                    {detailCompany.contactPerson && <span className="flex items-center gap-1"><User size={11} className="text-slate-500" />{detailCompany.contactPerson}</span>}
+                    {detailCompany.phone && <span className="flex items-center gap-1"><Phone size={11} className="text-slate-500" />{detailCompany.phone}</span>}
+                    {detailCompany.email && <span className="flex items-center gap-1"><Mail size={11} className="text-slate-500" />{detailCompany.email}</span>}
+                    {detailCompany.address && <span className="flex items-center gap-1"><MapPin size={11} className="text-slate-500" /><span className="truncate max-w-[260px]">{detailCompany.address}</span></span>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Stat şeridi */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 shrink-0">
+                {[
+                  { v: companyScreenings.length, l: 'Tarama' },
+                  { v: companyQuotes.length, l: 'Teklif' },
+                  { v: companyRecords.length, l: 'Kayıt' },
+                  { v: `%${detailStats.reviewedPct}`, l: 'İncelenme' }
+                ].map(s => (
+                  <div key={s.l} className="bg-white/[0.07] border border-white/10 rounded-2xl px-4 py-3 text-center min-w-[86px]">
+                    <p className="text-lg font-black tabular-nums">{s.v}</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{s.l}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Sekmeler ── */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-1.5 flex gap-1 overflow-x-auto scrollbar-none shadow-sm">
+            {([
+              { id: 'genel',     label: 'Genel Bakış',  icon: Activity },
+              { id: 'taramalar', label: 'Taramalar',    icon: Stethoscope, count: tabCounts.taramalar },
+              { id: 'teklifler', label: 'Teklifler',    icon: FileText,    count: tabCounts.teklifler },
+              { id: 'sonuclar',  label: 'Sonuçlar',     icon: FlaskConical, count: tabCounts.sonuclar },
+              { id: 'sablon',    label: 'Test Şablonu', icon: ClipboardList, count: tabCounts.sablon }
+            ] as { id: CompanyTab; label: string; icon: React.ElementType; count?: number }[]).map(t => {
+              const active = activeDetailTab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setDetailTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    active ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                  }`}
+                >
+                  <t.icon size={14} className={active ? 'text-emerald-400' : 'text-slate-400'} />
+                  {t.label}
+                  {t.count !== undefined && t.count > 0 && (
+                    <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black tabular-nums ${active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ═══ SEKME: GENEL BAKIŞ ═══ */}
+          {activeDetailTab === 'genel' && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* İletişim & Profil */}
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3 bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <User size={12} className="text-blue-500" /> İletişim & Profil
+                  </div>
+                  <div className="p-5 space-y-3">
+                    {[
+                      { icon: User, l: 'Yetkili', v: detailCompany.contactPerson },
+                      { icon: Phone, l: 'Telefon', v: detailCompany.phone },
+                      { icon: Mail, l: 'E-posta', v: detailCompany.email },
+                      { icon: MapPin, l: 'Adres', v: detailCompany.address }
+                    ].map(r => (
+                      <div key={r.l} className="flex items-start gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center shrink-0"><r.icon size={13} /></div>
+                        <div className="min-w-0">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{r.l}</p>
+                          <p className={`text-xs font-semibold ${r.v ? 'text-slate-700' : 'text-slate-300 italic'}`}>{r.v || 'Girilmemiş'}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {detailCompany.notes && (
+                      <div className="pt-3 border-t border-slate-100">
+                        <p className="text-[9px] font-bold text-amber-500 uppercase tracking-wide flex items-center gap-1 mb-1"><StickyNote size={11} /> Not</p>
+                        <p className="text-xs text-slate-600 leading-relaxed">{detailCompany.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Operasyon Özeti */}
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3 bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <ClipboardList size={12} className="text-blue-500" /> Operasyon Özeti
+                  </div>
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-semibold">Toplam Tarama</span>
+                      <span className="font-black text-slate-800 tabular-nums">{companyScreenings.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-semibold">Açık Teklif</span>
+                      <span className="font-black text-slate-800 tabular-nums">{detailStats.openQuotes}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-semibold">Onaylı Teklif Hacmi</span>
+                      <span className="font-black text-emerald-600 tabular-nums">{fmtMoney(detailStats.totalRevenue)}</span>
+                    </div>
+                    <div className="pt-3 border-t border-slate-100">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Sonraki Tarama</p>
+                      {detailStats.upcoming ? (
+                        <div className="flex items-center gap-2 p-2.5 bg-blue-50 border border-blue-100 rounded-xl">
+                          <CalendarDays size={14} className="text-blue-500 shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-blue-800 truncate">{detailStats.upcoming.title}</p>
+                            <p className="text-[10px] text-blue-500">{fmtDate(detailStats.upcoming.date)} · {detailStats.upcoming.location || 'Konum yok'}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-300 italic">Yaklaşan tarama yok</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sonuç İlerlemesi */}
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3 bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Eye size={12} className="text-blue-500" /> Sonuç İlerlemesi
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-slate-500 font-semibold">İncelenen Kayıt</span>
+                        <span className="font-black text-slate-800 tabular-nums">%{detailStats.reviewedPct}</span>
+                      </div>
+                      <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${detailStats.reviewedPct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${detailStats.reviewedPct}%` }} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-semibold">Anormallik İçeren Kayıt</span>
+                      <span className={`font-black tabular-nums ${detailStats.anomalies > 0 ? 'text-red-600' : 'text-slate-800'}`}>{detailStats.anomalies}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 font-semibold">Şablon Test Sayısı</span>
+                      <span className="font-black text-slate-800 tabular-nums">{detailCompany.tests.length}</span>
+                    </div>
+                    <button onClick={() => setDetailTab('sonuclar')} className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
+                      Sonuçlara Git <ChevronRight size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Son Aktiviteler */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="px-5 py-3 bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <Clock size={12} className="text-blue-500" /> Son Aktiviteler
+                </div>
+                {activityFeed.length === 0 ? (
+                  <p className="p-6 text-xs text-slate-300 italic text-center">Bu firmaya ait aktivite yok — teklif, tarama veya sonuç ekleyin.</p>
+                ) : (
+                  <div className="divide-y divide-slate-50">
+                    {activityFeed.map(a => (
+                      <div key={a.key} className="px-5 py-3 flex items-center gap-3">
+                        <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wide shrink-0 ${a.chip}`}>
+                          {a.sub.split(' · ')[0]}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-slate-700 truncate">{a.text}</p>
+                          <p className="text-[10px] text-slate-400 truncate">{a.sub}</p>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-semibold shrink-0 tabular-nums">{fmtDate(a.date)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ═══ SEKME: TARAMALAR ═══ */}
+          {activeDetailTab === 'taramalar' && (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              {companyScreenings.length === 0 ? (
+                <div className="p-10 text-center">
+                  <Stethoscope size={28} className="mx-auto text-slate-200 mb-3" />
+                  <p className="text-sm font-bold text-slate-600">Tarama yok</p>
+                  <p className="text-xs text-slate-400 mt-1">Bu firmaya ait planlanmış tarama bulunmuyor.</p>
+                  <button onClick={() => onNavigate?.('screenings')} className="mt-4 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">Tarama Planla</button>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {companyScreenings.map(s => {
+                    const pct = s.plannedCount > 0 ? Math.min(100, Math.round(s.completedCount / s.plannedCount * 100)) : 0;
+                    return (
+                      <button key={s.id} onClick={() => onNavigate?.('screenings')} className="w-full px-5 py-4 flex items-center gap-4 hover:bg-slate-50/60 transition-colors text-left group">
+                        <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-500 flex flex-col items-center justify-center shrink-0">
+                          <span className="text-sm font-black leading-none">{s.date.slice(8, 10)}</span>
+                          <span className="text-[8px] font-bold uppercase">{new Date(s.date).toLocaleDateString('tr-TR', { month: 'short' })}</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-slate-800 truncate">{s.title}</p>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg border ${SCR_STATUS[s.status].badge}`}>{SCR_STATUS[s.status].label}</span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                            <span className="flex items-center gap-1"><MapPin size={10} />{s.location || '—'}</span>
+                            <span className="flex items-center gap-1"><FlaskConical size={10} />{s.testIds.length} test</span>
+                            <span className="flex items-center gap-1"><UsersIcon size={10} />{s.completedCount}/{s.plannedCount} kişi</span>
+                          </p>
+                          <div className="mt-1.5 h-1.5 w-40 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${s.status === 'tamamlandi' ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                        <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-500 transition-colors shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ SEKME: TEKLİFLER ═══ */}
+          {activeDetailTab === 'teklifler' && (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              {companyQuotes.length === 0 ? (
+                <div className="p-10 text-center">
+                  <FileText size={28} className="mx-auto text-slate-200 mb-3" />
+                  <p className="text-sm font-bold text-slate-600">Teklif yok</p>
+                  <p className="text-xs text-slate-400 mt-1">Bu firmaya hazırlanmış teklif bulunmuyor.</p>
+                  <button onClick={() => onNavigate?.('quotes')} className="mt-4 px-4 py-2 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-colors">Teklif Oluştur</button>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {companyQuotes.map(q => {
+                    const meta = QUOTE_STATUS[q.status];
+                    const expired = isQuoteExpired(q);
+                    return (
+                      <button key={q.id} onClick={() => onNavigate?.(`quotes/${q.id}`)} className="w-full px-5 py-4 flex items-center gap-4 hover:bg-slate-50/60 transition-colors text-left group">
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${meta.dot}`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-black text-slate-800 font-mono">{q.quoteNumber}</p>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-lg border ${meta.badge}`}>{meta.label}</span>
+                            {expired && <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg bg-red-50 text-red-600 border border-red-200">SÜRESİ DOLDU</span>}
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                            {q.title || `${q.items.length} kalem`} · {fmtDate(q.createdAt)} → {fmtDate(q.validUntil)}
+                          </p>
+                        </div>
+                        <span className="text-sm font-black text-slate-800 tabular-nums shrink-0">{fmtMoney(quoteTotal(q))}</span>
+                        <ChevronRight size={16} className="text-slate-300 group-hover:text-emerald-500 transition-colors shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ SEKME: SONUÇLAR ═══ */}
+          {activeDetailTab === 'sonuclar' && (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              {companyRecords.length === 0 ? (
+                <div className="p-10 text-center">
+                  <FlaskConical size={28} className="mx-auto text-slate-200 mb-3" />
+                  <p className="text-sm font-bold text-slate-600">Sonuç kaydı yok</p>
+                  <p className="text-xs text-slate-400 mt-1">Bu firmaya ait hasta sonucu bulunmuyor.</p>
+                  <button onClick={() => onNavigate?.('dashboard')} className="mt-4 px-4 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors">Sonuç Ekle</button>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-50">
+                  {companyRecords.map(r => {
+                    const testCount = Object.keys(r.results).length;
+                    const abnormalCount = Object.values(r.status).filter(isAbnormalStatus).length;
+                    return (
+                      <button key={r.id} onClick={() => onNavigate?.(`dashboard/${r.id}`)} className="w-full px-5 py-3.5 flex items-center gap-4 hover:bg-slate-50/60 transition-colors text-left group">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black text-white shrink-0 ${r.isReviewed ? 'bg-emerald-500' : 'bg-slate-400'}`}>
+                          {r.isReviewed ? <Check size={14} /> : r.patientName.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-slate-800 truncate">{r.patientName}</p>
+                            {r.isReviewed && <span className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-600"><CheckCircle2 size={10} /> İncelendi</span>}
+                            {abnormalCount > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-red-50 text-red-600 border border-red-100">{abnormalCount} anormal</span>}
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                            {r.jobTitle || 'Personel'} · {fmtDate(r.date)} · {testCount} test
+                          </p>
+                        </div>
+                        <ChevronRight size={16} className="text-slate-300 group-hover:text-indigo-500 transition-colors shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ═══ SEKME: TEST ŞABLONU ═══ */}
+          {activeDetailTab === 'sablon' && (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="px-5 py-3 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                  <ClipboardList size={12} className="text-blue-500" /> Firma Test Şablonu · {detailCompany.tests.length} test
+                </span>
+                <button onClick={() => openEdit(detailCompany)} className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                  <Edit2 size={11} /> Düzenle
+                </button>
+              </div>
+              {detailCompany.tests.length === 0 ? (
+                <div className="p-10 text-center">
+                  <ClipboardList size={28} className="mx-auto text-slate-200 mb-3" />
+                  <p className="text-sm font-bold text-slate-600">Şablon tanımlanmamış</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Firma için varsayılan test seti tanımlanırsa tarama ve teklif oluştururken otomatik önerilir.</p>
+                  <button onClick={() => openEdit(detailCompany)} className="mt-4 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">Şablon Tanımla</button>
+                </div>
+              ) : (
+                <div className="p-5 space-y-4">
+                  {(() => {
+                    const groups = new Map<string, TestDefinition[]>();
+                    detailCompany.tests.forEach(t => {
+                      const cat = testCategory(t);
+                      if (!groups.has(cat)) groups.set(cat, []);
+                      groups.get(cat)!.push(t);
+                    });
+                    return [...groups.entries()].map(([cat, tests]) => (
+                      <div key={cat}>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{cat} · {tests.length}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {tests.map(t => (
+                            <span key={t.id} className="px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg">{t.name}</span>
+                          ))}
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                  <p className="text-[10px] text-slate-400 pt-2 border-t border-slate-100">Bu şablon; tarama oluştururken otomatik uygulanır, teklifte tek tıkla eklenir.</p>
+                </div>
+              )}
+            </div>
+          )}
+          </>
+            );
+          })()
+        ) : (
+          /* Firma bulunamadı */
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center space-y-3">
+            <AlertTriangle size={28} className="mx-auto text-amber-500" />
+            <p className="text-sm font-bold text-slate-700">Firma Bulunamadı</p>
+            <p className="text-xs text-slate-400">Bu firma silinmiş olabilir.</p>
+            <button onClick={closeDetail} className="px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">
+              Firmalara Dön
+            </button>
+          </div>
+        )
+      )}
+
+      {!activeDetailId && (
+      <>
       {/* ── Başlık ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -273,7 +823,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
             return (
               <div
                 key={company.id}
-                onClick={() => openEdit(company)}
+                onClick={() => openDetail(company)}
                 className="relative bg-white rounded-2xl border border-slate-200 p-5 flex flex-col hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/50 transition-all group cursor-pointer"
               >
                 {/* Kart başlığı */}
@@ -328,6 +878,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
             );
           })}
         </div>
+      )}
+
+      </>
       )}
 
       {/* ═══ FİRMA FORM MODALI ═══ */}

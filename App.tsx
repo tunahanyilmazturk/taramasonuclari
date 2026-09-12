@@ -364,6 +364,10 @@ function App() {
           companies={companies}
           records={records}
           allTests={masterTests}
+          detailCompanyId={hash.split('/')[1]}
+          detailTab={hash.split('/')[2]}
+          onNavigate={navigate}
+          onBack={goBack}
           onUpdateCompanies={setCompanies}
         />
       )}
