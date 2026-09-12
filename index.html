@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="tr" class="antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HanTech OSGB Yönetim Sistemi</title>
+    <meta name="description" content="Mobil sağlık taraması yönetim platformu. Firmalara fiyat teklifi hazırlayın, taramaları planlayın, laboratuvar PDF sonuçlarını AI ile otomatik okuyup analiz edin ve raporlayın." />
+    <meta property="og:title" content="HanTech OSGB Yönetim Sistemi" />
+    <meta property="og:description" content="Mobil sağlık taraması yönetim platformu. Tekliften rapora: fiyat teklifi, tarama planlaması ve AI destekli sonuç okuma tek platformda." />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+            colors: {
+              slate: {
+                850: '#1e293b',
+                950: '#020617',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <!-- PDF.js for reading PDF files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    <!-- ExcelJS for Advanced Excel Export (with styles) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+      
+      :root {
+        --bg-dot: #e2e8f0;
+        --bg-color: #f8fafc;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-color);
+        background-image: radial-gradient(var(--bg-dot) 1px, transparent 1px);
+        background-size: 24px 24px;
+        color: #0f172a;
+      }
+
+      /* Custom premium scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 10px;
+        transition: background 0.2s;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+
+      /* PRINT STYLES */
+      @media print {
+        body {
+          background: white !important;
+          background-image: none !important;
+        }
+        body * {
+          visibility: hidden;
+        }
+        #printable-content, #printable-content * {
+          visibility: visible;
+        }
+        #printable-content {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          background: white;
+          padding: 0;
+          margin: 0;
+          box-shadow: none !important;
+          border: none !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .page-break {
+          page-break-before: always;
+        }
+        @page {
+          margin: 1cm;
+          size: A4;
+        }
+      }
+    </style>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

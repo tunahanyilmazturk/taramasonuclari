@@ -1,0 +1,8 @@
+{
+  "name": "HanTech OSGB Yönetim Sistemi",
+  "description": "Mobil sağlık taraması yönetim platformu. Firmalara fiyat teklifi hazırlayın, taramaları planlayın, laboratuvar PDF sonuçlarını AI ile otomatik okuyup analiz edin ve raporlayın.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
