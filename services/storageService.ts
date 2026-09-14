@@ -45,7 +45,6 @@ export const DEFAULT_ORG_INFO: OrgInfo = {
 
 export const DEFAULT_APPEARANCE: AppearanceSettings = {
   theme: 'light',
-  accent: 'blue',
   fontScale: 'md',
   compact: false,
   reduceMotion: false,

@@ -331,13 +331,11 @@ export interface AppState {
 }
 
 /** Görünüm ayarları — tarayıcı-bazlı tema tercihleri */
-export type AccentColor = 'blue' | 'emerald' | 'violet' | 'rose' | 'amber';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type FontScale = 'sm' | 'md' | 'lg';
 
 export interface AppearanceSettings {
   theme: ThemeMode;
-  accent: AccentColor;
   fontScale: FontScale;       // html font-size: 14/16/17.5px
   compact: boolean;           // yoğun görünüm (dar boşluklar)
   reduceMotion: boolean;      // animasyonları azalt

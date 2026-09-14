@@ -1,23 +1,15 @@
-import { AppearanceSettings, AccentColor } from '../types';
+import { AppearanceSettings } from '../types';
 import { storageService } from './storageService';
 
 /**
  * Görünüm uygulama katmanı.
- * Tailwind CDN kullanıldığı için dark:/accent: varyantları yerine,
+ * Tailwind CDN kullanıldığı için dark: varyantları yerine,
  * <html> üzerindeki sınıflarla tetiklenen global override CSS'i enjekte edilir.
  * Tüm remap kuralları @media screen altında — yazdırma etkilenmez.
+ * Vurgu rengi sabit mavidir (Tailwind blue/indigo ailesi).
  */
 
 const STYLE_ID = 'appearance-overrides';
-
-/** Vurgu renk paletleri (Tailwind tonları) */
-export const ACCENTS: Record<AccentColor, { label: string; p: Record<string, string> }> = {
-  blue:    { label: 'Mavi',    p: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8' } },
-  emerald: { label: 'Zümrüt',  p: { 50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857' } },
-  violet:  { label: 'Mor',     p: { 50:'#f5f3ff',100:'#ede9fe',200:'#ddd6fe',300:'#c4b5fd',400:'#a78bfa',500:'#8b5cf6',600:'#7c3aed',700:'#6d28d9' } },
-  rose:    { label: 'Gül',     p: { 50:'#fff1f2',100:'#ffe4e6',200:'#fecdd3',300:'#fda4af',400:'#fb7185',500:'#f43f5e',600:'#e11d48',700:'#be123c' } },
-  amber:   { label: 'Kehribar',p: { 50:'#fffbeb',100:'#fef3c7',200:'#fde68a',300:'#fcd34d',400:'#fbbf24',500:'#f59e0b',600:'#d97706',700:'#b45309' } }
-};
 
 const FONT_SCALES = { sm: '14px', md: '16px', lg: '17.5px' } as const;
 
@@ -321,111 +313,6 @@ const DARK_CSS = `
   html.dark .bg-slate-50\\/20 { background-color:rgba(30,41,59,.2); }
 `;
 
-/** Vurgu rengi remap'i — mavi/indigo ailesi seçilen palete çevrilir */
-const buildAccentCss = (accent: AccentColor): string => {
-  if (accent === 'blue') return '';
-  const p = ACCENTS[accent].p;
-  const s = `html.accent-${accent}`;
-  return `
-  ${s} .bg-blue-50 { background-color:${p['50']}; }
-  ${s} .bg-blue-100 { background-color:${p['100']}; }
-  ${s} .bg-blue-200 { background-color:${p['200']}; }
-  ${s} .bg-blue-400 { background-color:${p['400']}; }
-  ${s} .bg-blue-500 { background-color:${p['500']}; }
-  ${s} .bg-blue-600 { background-color:${p['600']}; }
-  ${s} .bg-blue-700 { background-color:${p['700']}; }
-  ${s} .bg-indigo-50 { background-color:${p['50']}; }
-  ${s} .bg-indigo-100 { background-color:${p['100']}; }
-  ${s} .bg-indigo-600 { background-color:${p['600']}; }
-  ${s} .text-blue-400 { color:${p['400']}; }
-  ${s} .text-blue-500 { color:${p['500']}; }
-  ${s} .text-blue-600 { color:${p['600']}; }
-  ${s} .text-blue-700 { color:${p['700']}; }
-  ${s} .text-indigo-600 { color:${p['600']}; }
-  ${s} .border-blue-100 { border-color:${p['100']}; }
-  ${s} .border-blue-200 { border-color:${p['200']}; }
-  ${s} .border-blue-300 { border-color:${p['300']}; }
-  ${s} .border-blue-400 { border-color:${p['400']}; }
-  ${s} .ring-blue-100 { --tw-ring-color:${p['100']}; }
-  ${s} .ring-blue-300 { --tw-ring-color:${p['300']}; }
-  ${s} .ring-blue-400 { --tw-ring-color:${p['400']}; }
-  ${s} .focus\\:ring-blue-500:focus { --tw-ring-color:${p['500']}; }
-  ${s} .from-blue-50 { --tw-gradient-from:${p['50']} var(--tw-gradient-from-position); --tw-gradient-to:${p['50']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .from-blue-500 { --tw-gradient-from:${p['500']} var(--tw-gradient-from-position); --tw-gradient-to:${p['500']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .from-blue-600 { --tw-gradient-from:${p['600']} var(--tw-gradient-from-position); --tw-gradient-to:${p['600']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .to-indigo-50 { --tw-gradient-to:${p['50']} var(--tw-gradient-to-position); }
-  ${s} .to-indigo-50\\/60 { --tw-gradient-to:${p['50']}99 var(--tw-gradient-to-position); }
-  ${s} .to-indigo-600 { --tw-gradient-to:${p['600']} var(--tw-gradient-to-position); }
-  ${s} .to-indigo-700 { --tw-gradient-to:${p['700']} var(--tw-gradient-to-position); }
-  ${s} .shadow-blue-100\\/50 { --tw-shadow-color:${p['100']}80; }
-  ${s} .shadow-blue-200\\/50 { --tw-shadow-color:${p['200']}80; }
-  ${s} .shadow-blue-300\\/50 { --tw-shadow-color:${p['300']}80; }
-  /* hover / focus / grup varyantları — akcent sistemine bağlı aksiyonlar */
-  ${s} .bg-blue-50\\/30 { background-color:${p['50']}4d; }
-  ${s} .bg-blue-50\\/40 { background-color:${p['50']}66; }
-  ${s} .bg-blue-50\\/50 { background-color:${p['50']}80; }
-  ${s} .bg-blue-50\\/60 { background-color:${p['50']}99; }
-  ${s} .text-blue-800 { color:${p['700']}; }
-  ${s} .border-blue-500 { border-color:${p['500']}; }
-  ${s} .border-blue-600 { border-color:${p['600']}; }
-  ${s} .ring-blue-200 { --tw-ring-color:${p['200']}; }
-  ${s} .hover\\:bg-blue-50:hover { background-color:${p['50']}; }
-  ${s} .hover\\:bg-blue-50\\/30:hover { background-color:${p['50']}4d; }
-  ${s} .hover\\:bg-blue-50\\/60:hover { background-color:${p['50']}99; }
-  ${s} .hover\\:bg-blue-100:hover { background-color:${p['100']}; }
-  ${s} .hover\\:bg-blue-600:hover { background-color:${p['600']}; }
-  ${s} .hover\\:bg-blue-700:hover { background-color:${p['700']}; }
-  ${s} .hover\\:text-blue-600:hover { color:${p['600']}; }
-  ${s} .hover\\:text-blue-700:hover { color:${p['700']}; }
-  ${s} .hover\\:text-blue-800:hover { color:${p['700']}; }
-  ${s} .hover\\:border-blue-300:hover { border-color:${p['300']}; }
-  ${s} .hover\\:border-blue-400:hover { border-color:${p['400']}; }
-  ${s} .focus\\:border-blue-400:focus { border-color:${p['400']}; }
-  ${s} .focus\\:ring-blue-100:focus { --tw-ring-color:${p['100']}; }
-  ${s} .group:hover .group-hover\\:text-blue-500 { color:${p['500']}; }
-  ${s} .group:hover .group-hover\\:text-blue-600 { color:${p['600']}; }
-  ${s} .group:hover .group-hover\\:text-blue-700 { color:${p['700']}; }
-  ${s} .group:hover .group-hover\\:bg-blue-50 { background-color:${p['50']}; }
-  ${s} .group:focus-within .group-focus-within\\:text-blue-500 { color:${p['500']}; }
-  ${s} .from-blue-400 { --tw-gradient-from:${p['400']} var(--tw-gradient-from-position); --tw-gradient-to:${p['400']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .to-blue-500 { --tw-gradient-to:${p['500']} var(--tw-gradient-to-position); }
-  ${s} .to-blue-600 { --tw-gradient-to:${p['600']} var(--tw-gradient-to-position); }
-  ${s} .hover\\:from-blue-600:hover { --tw-gradient-from:${p['600']} var(--tw-gradient-from-position); --tw-gradient-to:${p['600']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .hover\\:to-blue-700:hover { --tw-gradient-to:${p['700']} var(--tw-gradient-to-position); }
-  /* Takvim — indigo ailesini akcent'e çevir */
-  ${s} .from-indigo-500 { --tw-gradient-from:${p['500']} var(--tw-gradient-from-position); --tw-gradient-to:${p['500']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .from-indigo-600 { --tw-gradient-from:${p['600']} var(--tw-gradient-from-position); --tw-gradient-to:${p['600']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .from-indigo-700 { --tw-gradient-from:${p['700']} var(--tw-gradient-from-position); --tw-gradient-to:${p['700']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .to-indigo-700 { --tw-gradient-to:${p['700']} var(--tw-gradient-to-position); }
-  ${s} .to-indigo-800 { --tw-gradient-to:${p['700']} var(--tw-gradient-to-position); }
-  ${s} .to-indigo-50\\/30 { --tw-gradient-to:${p['50']}4d var(--tw-gradient-to-position); }
-  ${s} .from-indigo-50\\/60 { --tw-gradient-from:${p['50']}99 var(--tw-gradient-from-position); --tw-gradient-to:${p['50']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .from-indigo-50 { --tw-gradient-from:${p['50']} var(--tw-gradient-from-position); --tw-gradient-to:${p['50']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .from-indigo-400 { --tw-gradient-from:${p['400']} var(--tw-gradient-from-position); --tw-gradient-to:${p['400']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .to-indigo-500 { --tw-gradient-to:${p['500']} var(--tw-gradient-to-position); }
-  ${s} .hover\\:from-indigo-700:hover { --tw-gradient-from:${p['700']} var(--tw-gradient-from-position); --tw-gradient-to:${p['700']}00 var(--tw-gradient-to-position); --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to); }
-  ${s} .hover\\:to-indigo-800:hover { --tw-gradient-to:${p['700']} var(--tw-gradient-to-position); }
-  ${s} .ring-indigo-100 { --tw-ring-color:${p['100']}; }
-  ${s} .ring-indigo-400 { --tw-ring-color:${p['400']}; }
-  ${s} .focus\\:ring-indigo-100:focus { --tw-ring-color:${p['100']}; }
-  ${s} .border-indigo-400 { border-color:${p['400']}; }
-  ${s} .hover\\:border-indigo-200:hover { border-color:${p['200']}; }
-  ${s} .focus\\:border-indigo-400:focus { border-color:${p['400']}; }
-  ${s} .text-indigo-500 { color:${p['500']}; }
-  ${s} .text-indigo-700 { color:${p['700']}; }
-  ${s} .hover\\:text-indigo-600:hover { color:${p['600']}; }
-  ${s} .group:hover .group-hover\\:text-indigo-600 { color:${p['600']}; }
-  ${s} .bg-indigo-50\\/20 { background-color:${p['50']}33; }
-  ${s} .bg-indigo-50\\/30 { background-color:${p['50']}4d; }
-  ${s} .bg-indigo-50\\/40 { background-color:${p['50']}66; }
-  ${s} .bg-indigo-50\\/50 { background-color:${p['50']}80; }
-  ${s} .bg-indigo-50\\/60 { background-color:${p['50']}99; }
-  ${s} .shadow-indigo-200 { --tw-shadow-color:${p['200']}80; }
-  ${s} .border-l-blue-500 { border-left-color:${p['500']}; }
-  ${s} .border-l-red-500 { border-left-color:#ef4444; }
-`;
-};
-
 /** Kompakt yoğunluk — yaygın boşluk ölçülerini küçültür */
 const COMPACT_CSS = `
   html.density-compact .p-6 { padding:16px; }
@@ -455,8 +342,6 @@ export const applyAppearance = (s?: AppearanceSettings) => {
   root.classList.toggle('dark', dark);
   root.classList.toggle('density-compact', a.compact);
   root.classList.toggle('reduce-motion', a.reduceMotion);
-  ACCENT_KEYS.forEach(k => root.classList.remove(`accent-${k}`));
-  if (a.accent !== 'blue') root.classList.add(`accent-${a.accent}`);
   root.style.fontSize = FONT_SCALES[a.fontScale] ?? '16px';
 
   let styleEl = document.getElementById(STYLE_ID) as HTMLStyleElement | null;
@@ -465,10 +350,8 @@ export const applyAppearance = (s?: AppearanceSettings) => {
     styleEl.id = STYLE_ID;
     document.head.appendChild(styleEl);
   }
-  styleEl.textContent = `@media screen {\n${dark ? DARK_CSS : ''}\n${buildAccentCss(a.accent)}\n${a.compact ? COMPACT_CSS : ''}\n}\n${a.reduceMotion ? MOTION_CSS : ''}`;
+  styleEl.textContent = `@media screen {\n${dark ? DARK_CSS : ''}\n${a.compact ? COMPACT_CSS : ''}\n}\n${a.reduceMotion ? MOTION_CSS : ''}`;
 };
-
-const ACCENT_KEYS = Object.keys(ACCENTS) as AccentColor[];
 
 /** Sistem teması seçiliyken OS tercihini canlı takip et */
 let mediaBound = false;

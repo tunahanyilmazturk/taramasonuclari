@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { AppState, User, AuditLog, ReportSettings, OrgInfo, AppearanceSettings, SettingsTab } from '../types';
 import { storageService } from '../services/storageService';
-import { updateAppearance, ACCENTS } from '../services/appearance';
+import { updateAppearance } from '../services/appearance';
 import { hashPassword } from '../utils/security';
 import { AiSettings } from './AiSettings';
 import { UserManager } from './UserManager';
@@ -928,10 +928,10 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                   <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
                       <div>
                           <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Palette size={18} className="text-blue-600"/> Görünüm Ayarları</h3>
-                          <p className="text-xs text-slate-500 mt-1">Tema, renk ve yoğunluk tercihleri — değişiklikler anında uygulanır ve bu tarayıcıda saklanır.</p>
+                          <p className="text-xs text-slate-500 mt-1">Tema, yazı ölçeği ve yoğunluk tercihleri — değişiklikler anında uygulanır ve bu tarayıcıda saklanır.</p>
                       </div>
                       <button
-                          onClick={() => { setAppearance(updateAppearance({ theme:'light', accent:'blue', fontScale:'md', compact:false, reduceMotion:false, sidebarCollapsed:false })); addNotification('info', 'Görünüm ayarları varsayılana döndürüldü.'); }}
+                          onClick={() => { setAppearance(updateAppearance({ theme:'light', fontScale:'md', compact:false, reduceMotion:false, sidebarCollapsed:false })); addNotification('info', 'Görünüm ayarları varsayılana döndürüldü.'); }}
                           className="text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl px-3.5 py-2 transition-colors"
                       >
                           Varsayılana Dön
@@ -969,35 +969,6 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                                   <Smartphone size={11} /> Şu an aktif: <b>{window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'Koyu' : 'Açık'}</b> (işletim sistemi tercihine göre otomatik)
                               </p>
                           )}
-                      </section>
-
-                      {/* VURGU RENGİ — önizlemeli kart */}
-                      <section>
-                          <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Vurgu Rengi</h4>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                              {(Object.keys(ACCENTS) as (keyof typeof ACCENTS)[]).map(key => {
-                                  const isActive = appearance.accent === key;
-                                  return (
-                                      <button
-                                          key={key}
-                                          onClick={() => updateAppearancePref({ accent: key })}
-                                          className={`relative flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all overflow-hidden ${
-                                              isActive ? 'border-slate-800 shadow-md' : 'border-slate-200 hover:border-slate-300 bg-white'
-                                          }`}
-                                          title={ACCENTS[key].label}
-                                      >
-                                          {/* Önizleme bandı */}
-                                          <div className="w-full h-8 rounded-lg" style={{ background: `linear-gradient(135deg, ${ACCENTS[key].p['400']}, ${ACCENTS[key].p['600']})` }} />
-                                          <span className="text-xs font-bold text-slate-700">{ACCENTS[key].label}</span>
-                                          {isActive && (
-                                              <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-white flex items-center justify-center shadow">
-                                                  <span className="w-2 h-2 rounded-full" style={{ background: ACCENTS[key].p['600'] }} />
-                                              </span>
-                                          )}
-                                      </button>
-                                  );
-                              })}
-                          </div>
                       </section>
 
                       {/* YAZI ÖLÇEĞİ — önizlemeli */}
@@ -1061,21 +1032,21 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                           <div className="rounded-2xl border border-slate-200 overflow-hidden">
                               <div className="p-4 bg-slate-50/50 border-b border-slate-100">
                                   <div className="flex items-center gap-2 mb-2">
-                                      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: `linear-gradient(135deg, ${ACCENTS[appearance.accent].p['400']}, ${ACCENTS[appearance.accent].p['600']})` }}>
+                                      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white bg-gradient-to-br from-blue-400 to-blue-600">
                                           <Palette size={16} />
                                       </div>
                                       <div>
                                           <p className="text-sm font-bold text-slate-800">Örnek Kart Başlığı</p>
-                                          <p className="text-[10px] text-slate-400">Bu kart seçili tema ve renk ile görünür</p>
+                                          <p className="text-[10px] text-slate-400">Bu kart seçili tema ve yazı ölçeği ile görünür</p>
                                       </div>
                                   </div>
-                                  <p className="text-xs text-slate-500 leading-relaxed">Bu bir örnek metindir. Yazı ölçeği seçiminize göre boyutlanır ve vurgu rengi butonlarda kullanılır.</p>
+                                  <p className="text-xs text-slate-500 leading-relaxed">Bu bir örnek metindir. Yazı ölçeği seçiminize göre boyutlanır.</p>
                               </div>
                               <div className="p-4 flex items-center gap-2 flex-wrap">
-                                  <button className="px-4 py-2 text-white text-xs font-bold rounded-xl shadow-sm" style={{ background: ACCENTS[appearance.accent].p['600'] }}>Birincil Buton</button>
-                                  <button className="px-4 py-2 text-xs font-bold rounded-xl border-2" style={{ borderColor: ACCENTS[appearance.accent].p['400'], color: ACCENTS[appearance.accent].p['700'] }}>İkincil Buton</button>
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold text-white" style={{ background: ACCENTS[appearance.accent].p['500'] }}>Rozet</span>
-                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: ACCENTS[appearance.accent].p['100'], color: ACCENTS[appearance.accent].p['700'] }}>Etiket</span>
+                                  <button className="px-4 py-2 text-white text-xs font-bold rounded-xl shadow-sm bg-blue-600">Birincil Buton</button>
+                                  <button className="px-4 py-2 text-xs font-bold rounded-xl border-2 border-blue-400 text-blue-700">İkincil Buton</button>
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold text-white bg-blue-500">Rozet</span>
+                                  <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">Etiket</span>
                               </div>
                           </div>
                       </section>
