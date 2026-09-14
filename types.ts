@@ -31,6 +31,20 @@ export interface ExtractedResult {
   unit: string;
 }
 
+/** Ek-2 İşe Giriş/Periyodik Muayene Formu — çıkarılan yapılandırılmış alanlar */
+export interface Ek2Details {
+  name?: string;         // Adı ve Soyadı
+  birthInfo?: string;    // Doğum Yeri ve Tarihi
+  gender?: string;       // Cinsiyeti
+  phone?: string;        // Tel No / E-Posta
+  job?: string;          // Yaptığı İş / Çalıştığı Bölüm
+  bloodType?: string;    // Kan Grubu
+  height?: string;       // Boy (cm)
+  weight?: string;       // Kilo (kg)
+  bmi?: string;          // Vücut Kitle İndeksi
+  conclusion?: string;   // KANAAT VE SONUÇ metni
+}
+
 /** PDF çıkarım raporu — hangi testler bulundu, hangileri bulunamadı */
 export interface ExtractionReport {
   patientName: string;
@@ -46,6 +60,8 @@ export interface ExtractionReport {
   totalTests: number;
   /** Bulunan test sayısı */
   foundCount: number;
+  /** Ek-2 belgesinden çıkarılan yapılandırılmış hasta bilgileri (hasta kartı için) */
+  ek2Details?: Ek2Details;
 }
 
 export interface PatientRecord {

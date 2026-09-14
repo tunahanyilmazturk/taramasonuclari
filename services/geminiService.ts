@@ -183,9 +183,10 @@ const analyzeMedicalTextGemini = async (
     }
 
     if (t.key.includes('ek_2')) {
-        return `- "${t.name}": Analyze Ek-2 Belgesi (Ek-2 Document).
-        STANDARDIZATION RULE:
-        - This document is not yet supported for automated extraction. Return "Belge taranacak".`;
+        return `- "${t.name}": Analyze Ek-2 İşe Giriş/Periyodik Muayene Formu.
+        Find the "KANAAT VE SONUÇ" section and extract the conclusion sentence
+        (e.g., "KALİTE KONTROL işinde bedenen ve ruhen çalışmaya elverişlidir").
+        Return ONLY the conclusion text, not the full form data.`;
     }
 
     if (t.key.includes('sft') || t.key.includes('solunum')) {

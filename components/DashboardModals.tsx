@@ -81,6 +81,7 @@ export const DashboardModals: React.FC<DashboardModalsProps> = ({
     foundCount: number;
     totalTests: number;
     missingTests: string[];
+    ek2Details?: import('../types').Ek2Details;
   } | null>(null);
 
   // PDF'den otomatik form doldurma
@@ -114,7 +115,8 @@ export const DashboardModals: React.FC<DashboardModalsProps> = ({
       setExtractionReport({
         foundCount: result.foundCount,
         totalTests: result.totalTests,
-        missingTests: result.missingTests
+        missingTests: result.missingTests,
+        ek2Details: result.ek2Details
       });
     } catch (e) {
       console.error('PDF auto-fill error:', e);
@@ -375,6 +377,47 @@ export const DashboardModals: React.FC<DashboardModalsProps> = ({
                       {extractionReport.missingTests.length > 8 && (
                         <span className="text-[10px] text-slate-400">+{extractionReport.missingTests.length - 8} daha</span>
                       )}
+                    </div>
+                  )}
+                  {/* Ek-2 Belgesi — çıkarılan hasta bilgileri */}
+                  {extractionReport.ek2Details && (
+                    <div className="mt-2 pt-2 border-t border-blue-100 space-y-1.5">
+                      <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide">Ek-2 Belgesi — Hasta Kartı</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        {extractionReport.ek2Details.name && (
+                          <p className="text-[11px] text-slate-700"><span className="text-slate-400">Ad:</span> {extractionReport.ek2Details.name}</p>
+                        )}
+                        {extractionReport.ek2Details.birthInfo && (
+                          <p className="text-[11px] text-slate-700"><span className="text-slate-400">Doğum:</span> {extractionReport.ek2Details.birthInfo}</p>
+                        )}
+                        {extractionReport.ek2Details.gender && (
+                          <p className="text-[11px] text-slate-700"><span className="text-slate-400">Cinsiyet:</span> {extractionReport.ek2Details.gender}</p>
+                        )}
+                        {extractionReport.ek2Details.phone && (
+                          <p className="text-[11px] text-slate-700"><span className="text-slate-400">Tel:</span> {extractionReport.ek2Details.phone}</p>
+                        )}
+                        {extractionReport.ek2Details.job && (
+                          <p className="text-[11px] text-slate-700"><span className="text-slate-400">İş:</span> {extractionReport.ek2Details.job}</p>
+                        )}
+                        {extractionReport.ek2Details.bloodType && (
+                          <p className="text-[11px] text-slate-700"><span className="text-slate-400">Kan:</span> {extractionReport.ek2Details.bloodType}</p>
+                        )}
+                        {(extractionReport.ek2Details.height || extractionReport.ek2Details.weight || extractionReport.ek2Details.bmi) && (
+                          <p className="text-[11px] text-slate-700 col-span-2">
+                            <span className="text-slate-400">Fizik:</span>{' '}
+                            {[
+                              extractionReport.ek2Details.height && `Boy: ${extractionReport.ek2Details.height} cm`,
+                              extractionReport.ek2Details.weight && `Kilo: ${extractionReport.ek2Details.weight} kg`,
+                              extractionReport.ek2Details.bmi && `VKİ: ${extractionReport.ek2Details.bmi}`
+                            ].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                        {extractionReport.ek2Details.conclusion && (
+                          <p className="text-[11px] text-slate-700 col-span-2 italic border-l-2 border-emerald-300 pl-2">
+                            {extractionReport.ek2Details.conclusion}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

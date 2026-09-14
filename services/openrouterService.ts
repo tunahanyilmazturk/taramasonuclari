@@ -151,7 +151,7 @@ export const analyzeMedicalTextOpenRouter = async (
             return `- "${t.name}": Analyze Lumbosacral X-Ray. If normal, return "Normal Lumbosakral Vertebra Grafisi". If pathology, return detailed finding.`;
         }
         if (t.key.includes('ek_2')) {
-            return `- "${t.name}": Ek-2 Belgesi. Not yet supported for automated extraction. Return "Belge taranacak".`;
+            return `- "${t.name}": Analyze Ek-2 İşe Giriş/Periyodik Muayene Formu. Find the "KANAAT VE SONUÇ" section. Return ONLY the conclusion sentence (e.g., "KALİTE KONTROL işinde bedenen ve ruhen çalışmaya elverişlidir").`;
         }
         if (t.key.includes('sft') || t.key.includes('solunum')) {
             return `- "${t.name}": Analyze SFT/Spirometry. If normal, return "Normal Spirometri". If pathology, return summary.`;

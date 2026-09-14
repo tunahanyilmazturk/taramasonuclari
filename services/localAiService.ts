@@ -481,86 +481,26 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
         if (pathMatch) return `Bulgu: ${pathMatch[0]}`;
     }
 
-    // Ek-2 Belgesi — İşe Giriş/Periyodik Muayene Formu detaylı çıkarım
+    // Ek-2 Belgesi — sonuç değeri sadece KANAAT VE SONUÇ cümlesi
+    // (ÇALIŞANIN detayları ayrıca extractEk2Details ile çekilir)
     if (test.key.includes('ek_2')) {
-        const sectionLines = cleaned.split('\n');
-        const parts: string[] = [];
-
-        // ── ÇALIŞANIN bölümü — kişisel bilgiler ──
-        const findAfter = (pattern: RegExp): string | undefined => {
-            for (let i = 0; i < sectionLines.length; i++) {
-                const m = sectionLines[i].match(pattern);
-                if (m) {
-                    // Değer aynı satırda olabilir veya sonraki satırda
-                    const after = m[2]?.trim();
-                    if (after && after.length > 1) return after;
-                    // Sonraki satırı dene
-                    if (i + 1 < sectionLines.length) {
-                        const next = sectionLines[i + 1].trim();
-                        if (next && next.length > 1) return next;
-                    }
-                }
-            }
-            return undefined;
-        };
-
-        // Adı ve Soyadı
-        const name = findAfter(/ad[iıİ]\s+ve\s+soyad[iıİ]\s*[:=]?\s*(.*)/i);
-        if (name) parts.push(`Ad: ${name}`);
-
-        // Doğum Yeri ve Tarihi
-        const birth = findAfter(/do[gğ]um\s+yeri\s+ve\s+tarihi\s*[:=]?\s*(.*)/i);
-        if (birth) parts.push(`Doğum: ${birth}`);
-
-        // Cinsiyeti
-        const gender = findAfter(/cinsiyeti?\s*[:=]?\s*(.*)/i);
-        if (gender) parts.push(`Cinsiyet: ${gender}`);
-
-        // Tel No / E-Posta
-        const phone = findAfter(/tel\s+no\s*[/\\]?\s*e-?posta\s*[:=]?\s*(.*)/i);
-        if (phone) parts.push(`Tel: ${phone}`);
-
-        // Yaptığı İş / Çalıştığı Bölüm
-        const job = findAfter(/yapt[iıİ][gğ][iıİ]\s+i[sş]\s*[/\\]?\s*[cç]al[iıİ][sş]t[iıİ][gğ][iıİ]\s+b[oö]l[uü]m\s*[:=]?\s*(.*)/i)
-            || findAfter(/[cç]al[iıİ][sş]t[iıİ][gğ][iıİ]\s+b[oö]l[uü]m\s*[:=]?\s*(.*)/i);
-        if (job) parts.push(`İş: ${job}`);
-
-        // Kan Grubu
-        const blood = findAfter(/kan\s+grubu\s*[:=]?\s*(.*)/i);
-        if (blood) parts.push(`Kan: ${blood}`);
-
-        // ── FİZİK MUAYENE — boy, kilo, VKİ ──
-        const boyMatch = cleaned.match(/boy\s*[:=]?\s*(\d+)\s*(?:cm)?/i);
-        const kiloMatch = cleaned.match(/kilo\s*[:=]?\s*(\d+)\s*(?:kg)?/i);
-        const vkiMatch = cleaned.match(/v[üu]cut\s+kitle\s+[iıİ]ndeksi\s*[:=]?\s*([\d.,]+)/i);
-        const physical: string[] = [];
-        if (boyMatch) physical.push(`Boy: ${boyMatch[1]} cm`);
-        if (kiloMatch) physical.push(`Kilo: ${kiloMatch[1]} kg`);
-        if (vkiMatch) physical.push(`VKİ: ${vkiMatch[1]}`);
-        if (physical.length > 0) parts.push(physical.join(', '));
-
-        // ── KANAAT VE SONUÇ bölümü ──
+        // KANAAT VE SONUÇ bölümünü bul
         const kanaatIdx = cleaned.search(/kanaat\s+ve\s+sonu[cç]/i);
         if (kanaatIdx >= 0) {
-            // KANAAT VE SONUÇ'tan sonraki metni al
-            const kanaatText = cleaned.substring(kanaatIdx).replace(/kanaat\s+ve\s+sonu[cç]\s*\*?\s*[:=]?\s*/i, '').trim();
-            // Numaralı satırları birleştir
+            const kanaatText = cleaned.substring(kanaatIdx)
+                .replace(/kanaat\s+ve\s+sonu[cç]\s*\*?\s*[:=]?\s*/i, '').trim();
             const kanaatLines = kanaatText.split('\n')
                 .map(l => l.replace(/^\d+[-.)]?\s*/, '').trim())
                 .filter(l => l.length > 3 && !l.startsWith('(*'));
-            // İlk anlamlı satırı al (genellikle sonuç cümlesi)
             if (kanaatLines.length > 0) {
-                // "içinde bedenen ve ruhen çalışmaya elverişlidir" kalıbı yaygın
-                const elverisli = kanaatLines.find(l => includesTr(normalizeTr(l), 'elveri') || includesTr(normalizeTr(l), 'çalışabilir') || includesTr(normalizeTr(l), 'uygun'));
-                if (elverisli) {
-                    parts.push(`Sonuç: ${elverisli}`);
-                } else {
-                    parts.push(`Sonuç: ${kanaatLines[0]}`);
-                }
+                // "elverişlidir" / "çalışabilir" / "uygun" kalıbı tercih et
+                const elverisli = kanaatLines.find(l => {
+                    const n = normalizeTr(l);
+                    return includesTr(n, 'elveri') || includesTr(n, 'çalışabilir') || includesTr(n, 'uygun');
+                });
+                return elverisli || kanaatLines[0];
             }
         }
-
-        if (parts.length > 0) return parts.join(' | ');
         return undefined;
     }
 
@@ -599,6 +539,69 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
     // Genel metin — temizlenmiş kalan metni döndür (kısa olanı)
     if (!suppressFallback && cleaned.length < 80) return cleaned;
     return undefined;
+};
+
+// ─── EK-2 BELGESİ DETAYLI ÇIKARIM ──────────────────────────────────────────
+
+/**
+ * Ek-2 İşe Giriş/Periyodik Muayene Formu'ndan yapılandırılmış hasta bilgileri çeker.
+ * Sonuç listesinde kullanılmaz — hasta kartı / form doldurma için ayrı saklanır.
+ */
+const extractEk2Details = (text: string): import('../types').Ek2Details => {
+    const sectionLines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    const cleaned = sectionLines.join('\n');
+    const details: import('../types').Ek2Details = {};
+
+    // Alan adı + değer eşleştirme — değer aynı satırda veya sonraki satırda
+    const findAfter = (pattern: RegExp): string | undefined => {
+        for (let i = 0; i < sectionLines.length; i++) {
+            const m = sectionLines[i].match(pattern);
+            if (m) {
+                const after = m[1]?.trim();
+                if (after && after.length > 1) return after;
+                if (i + 1 < sectionLines.length) {
+                    const next = sectionLines[i + 1].trim();
+                    if (next && next.length > 1 && !/^\d+[-.)]/.test(next)) return next;
+                }
+            }
+        }
+        return undefined;
+    };
+
+    details.name = findAfter(/ad[iıİ]\s+ve\s+soyad[iıİ]\s*[:=]?\s*(.+)/i);
+    details.birthInfo = findAfter(/do[gğ]um\s+yeri\s+ve\s+tarihi\s*[:=]?\s*(.+)/i);
+    details.gender = findAfter(/cinsiyeti?\s*[:=]?\s*(.+)/i);
+    details.phone = findAfter(/tel\s+no\s*[/\\]?\s*e-?posta\s*[:=]?\s*(.+)/i);
+    details.job = findAfter(/yapt[iıİ][gğ][iıİ]\s+i[sş]\s*[/\\]?\s*[cç]al[iıİ][sş]t[iıİ][gğ][iıİ]\s+b[oö]l[uü]m\s*[:=]?\s*(.+)/i)
+        || findAfter(/[cç]al[iıİ][sş]t[iıİ][gğ][iıİ]\s+b[oö]l[uü]m\s*[:=]?\s*(.+)/i);
+    details.bloodType = findAfter(/kan\s+grubu\s*[:=]?\s*(.+)/i);
+
+    // Fizik muayene — boy, kilo, VKİ
+    const boyMatch = cleaned.match(/boy\s*[:=]?\s*(\d+)\s*(?:cm)?/i);
+    const kiloMatch = cleaned.match(/kilo\s*[:=]?\s*(\d+)\s*(?:kg)?/i);
+    const vkiMatch = cleaned.match(/v[üu]cut\s+kitle\s+[iıİ]ndeksi\s*[:=]?\s*([\d.,]+)/i);
+    if (boyMatch) details.height = boyMatch[1];
+    if (kiloMatch) details.weight = kiloMatch[1];
+    if (vkiMatch) details.bmi = vkiMatch[1];
+
+    // KANAAT VE SONUÇ — sonuç cümlesi
+    const kanaatIdx = cleaned.search(/kanaat\s+ve\s+sonu[cç]/i);
+    if (kanaatIdx >= 0) {
+        const kanaatText = cleaned.substring(kanaatIdx)
+            .replace(/kanaat\s+ve\s+sonu[cç]\s*\*?\s*[:=]?\s*/i, '').trim();
+        const kanaatLines = kanaatText.split('\n')
+            .map(l => l.replace(/^\d+[-.)]?\s*/, '').trim())
+            .filter(l => l.length > 3 && !l.startsWith('(*'));
+        if (kanaatLines.length > 0) {
+            const elverisli = kanaatLines.find(l => {
+                const n = normalizeTr(l);
+                return includesTr(n, 'elveri') || includesTr(n, 'çalışabilir') || includesTr(n, 'uygun');
+            });
+            details.conclusion = elverisli || kanaatLines[0];
+        }
+    }
+
+    return details;
 };
 
 // ─── ANA ÇIKARIM FONKSİYONU ─────────────────────────────────────────────────
@@ -676,16 +679,29 @@ export const analyzeMedicalTextLocal = (
         if (!found) missingTests.push(test.name);
     }
 
+    // Ek-2 belgesi bulunduysa — hasta bilgilerini yapılandırılmış olarak ekle
+    let ek2Details: import('../types').Ek2Details | undefined;
+    const hasEk2 = flatTests.some(t => t.key.includes('ek_2')) &&
+        extractedResults.some(r => {
+            const t = flatTests.find(ft => ft.name === r.testName);
+            return t?.key.includes('ek_2');
+        });
+    if (hasEk2 || includesTr(normalizeTr(text), 'işe giriş') || includesTr(normalizeTr(text), 'periyodik muayene')) {
+        const d = extractEk2Details(text);
+        if (Object.values(d).some(v => v !== undefined)) ek2Details = d;
+    }
+
     return {
-        patientName: meta.patientName || 'Bilinmeyen Hasta',
+        patientName: ek2Details?.name || meta.patientName || 'Bilinmeyen Hasta',
         registrationNumber: meta.registrationNumber || 'Belirtilmemiş',
-        jobTitle: meta.jobTitle || 'Belirtilmemiş',
+        jobTitle: ek2Details?.job || meta.jobTitle || 'Belirtilmemiş',
         date: meta.date || new Date().toISOString().split('T')[0],
         extractedResults,
         foundTests,
         missingTests,
         totalTests: flatTests.length,
-        foundCount: extractedResults.length
+        foundCount: extractedResults.length,
+        ek2Details
     };
 };
 
