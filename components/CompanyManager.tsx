@@ -119,6 +119,46 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
     ? detailTab as CompanyTab
     : localTab;
 
+  // ── Şablon modalı state ──
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateTestIds, setTemplateTestIds] = useState<Set<string>>(new Set());
+  const [templateSearch, setTemplateSearch] = useState('');
+
+  // ── Şablon modalı yardımcıları ──
+  const filteredTemplateTests = useMemo(() => {
+    const q = templateSearch.trim().toLowerCase();
+    if (!q) return allTests;
+    return allTests.filter(t => t.name.toLowerCase().includes(q));
+  }, [allTests, templateSearch]);
+  const templateTestsByCategory = useMemo(() => {
+    const m = new Map<string, TestDefinition[]>();
+    filteredTemplateTests.forEach(t => {
+      const cat = testCategory(t);
+      if (!m.has(cat)) m.set(cat, []);
+      m.get(cat)!.push(t);
+    });
+    return [...m.entries()];
+  }, [filteredTemplateTests]);
+  const openTemplateModal = () => {
+    if (!detailCompany) return;
+    setTemplateTestIds(new Set(detailCompany.tests.map(t => t.id)));
+    setTemplateSearch('');
+    setShowTemplateModal(true);
+  };
+  const toggleTemplateTest = (id: string) => {
+    setTemplateTestIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const saveTemplate = () => {
+    if (!detailCompany) return;
+    const selectedTests = allTests.filter(t => templateTestIds.has(t.id));
+    onUpdateCompanies(companies.map(c => c.id === detailCompany.id ? { ...c, tests: selectedTests } : c));
+    setShowTemplateModal(false);
+  };
+
   // Form modal state
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -362,6 +402,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
               </button>
               <button onClick={() => onNavigate?.('screenings/new/' + detailCompany.id)} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
                 <Stethoscope size={13} /> Yeni Tarama
+              </button>
+              <button onClick={openTemplateModal} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-700 rounded-xl transition-colors">
+                <ClipboardList size={13} /> Şablon Oluştur
               </button>
               <span className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />
               <button onClick={() => openEdit(detailCompany)} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-slate-900 text-white hover:bg-slate-700 rounded-xl transition-colors">
@@ -1163,6 +1206,212 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
             </div>
           </div>
       </Modal>
+
+      {/* Şablon Oluştur Modalı */}
+      {showTemplateModal && detailCompany && (
+        <Modal open={showTemplateModal} onClose={() => setShowTemplateModal(false)} overlayClassName="p-4 sm:p-6">
+          <div className={`${modalPanel} max-w-4xl w-full max-h-[90vh] rounded-2xl flex flex-col overflow-hidden`}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <ClipboardList size={18} className="text-indigo-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800">Test Şablonu Oluştur</h3>
+                  <p className="text-[11px] text-slate-500">{detailCompany.name} için tekrar kullanılacak test şablonu</p>
+                </div>
+              </div>
+              <button onClick={() => setShowTemplateModal(false)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body — iki sütun: test havuzu / seçili testler */}
+            <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+              {/* Sol: Test Havuzu */}
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                    <FlaskConical size={13} className="text-indigo-500"/> Test Havuzu
+                  </h4>
+                  <div className="relative w-40">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={12} />
+                    <input
+                      type="text"
+                      placeholder="Test ara..."
+                      value={templateSearch}
+                      onChange={(e) => setTemplateSearch(e.target.value)}
+                      className="w-full pl-7 pr-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+                <div className="border border-slate-200 rounded-xl overflow-hidden flex flex-col max-h-[55vh]">
+                  <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100">
+                    <span className="text-[10px] font-bold text-slate-400">{allTests.length} test</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setTemplateTestIds(new Set(allTests.map(t => t.id)))}
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700"
+                      >
+                        Tümünü Seç
+                      </button>
+                      {templateTestIds.size > 0 && (
+                        <>
+                          <span className="text-slate-200">·</span>
+                          <button
+                            type="button"
+                            onClick={() => setTemplateTestIds(new Set())}
+                            className="text-[10px] font-bold text-slate-400 hover:text-slate-600"
+                          >
+                            Temizle
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    {templateTestsByCategory.map(([cat, catTests]) => {
+                      const allIn = catTests.every(t => templateTestIds.has(t.id));
+                      return (
+                        <div key={cat}>
+                          <div className="sticky top-0 z-10 flex items-center justify-between px-3 py-1.5 bg-slate-50/95 backdrop-blur border-b border-slate-100">
+                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">{cat}</span>
+                            <button
+                              type="button"
+                              onClick={() => setTemplateTestIds(prev => {
+                                const next = new Set(prev);
+                                if (allIn) catTests.forEach(t => next.delete(t.id));
+                                else catTests.forEach(t => next.add(t.id));
+                                return next;
+                              })}
+                              className="text-[9px] font-bold text-indigo-600 hover:text-indigo-700"
+                            >
+                              {allIn ? 'Kaldır' : 'Tümünü Ekle'}
+                            </button>
+                          </div>
+                          <div className="p-1.5 space-y-1">
+                            {catTests.map(t => {
+                              const sel = templateTestIds.has(t.id);
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  onClick={() => toggleTemplateTest(t.id)}
+                                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg border text-left text-[11px] font-medium transition-all ${
+                                    sel ? 'border-indigo-300 bg-indigo-50 text-indigo-800' : 'border-slate-200 bg-white text-slate-600 hover:border-indigo-300 hover:bg-indigo-50/30'
+                                  }`}
+                                >
+                                  <span className={`w-4 h-4 rounded flex items-center justify-center shrink-0 ${sel ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-transparent'}`}>
+                                    {sel ? <Check size={10}/> : <Plus size={10}/>}
+                                  </span>
+                                  <span className="truncate flex-1">{t.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {templateTestsByCategory.length === 0 && (
+                      <p className="text-xs text-slate-400 italic text-center py-6">Eşleşen test yok.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Sağ: Seçili Testler */}
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="text-[11px] font-black text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="text-indigo-500"/> Seçili Testler
+                  </h4>
+                  <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">{templateTestIds.size} test</span>
+                </div>
+                <div className="border border-slate-200 rounded-xl overflow-hidden flex flex-col max-h-[55vh]">
+                  {templateTestIds.size === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-3">
+                        <FlaskConical size={22} className="text-slate-300" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-500">Henüz test seçilmedi</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Soldaki havuzdan test ekleyin</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+                        {(() => {
+                          const byCat = new Map<string, TestDefinition[]>();
+                          allTests.filter(t => templateTestIds.has(t.id)).forEach(t => {
+                            const cat = testCategory(t);
+                            if (!byCat.has(cat)) byCat.set(cat, []);
+                            byCat.get(cat)!.push(t);
+                          });
+                          return [...byCat.entries()].map(([cat, tests]) => (
+                            <div key={cat} className="py-2">
+                              <div className="px-3 py-1.5 flex items-center justify-between">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{cat}</span>
+                                <span className="text-[9px] font-bold text-slate-400">{tests.length}</span>
+                              </div>
+                              <div className="px-2 space-y-1">
+                                {tests.map(t => (
+                                  <div key={t.id} className="flex items-center gap-2 px-2 py-2 rounded-lg bg-indigo-50/40 border border-indigo-100 group">
+                                    <FlaskConical size={12} className="text-indigo-500 shrink-0" />
+                                    <span className="text-[11px] font-medium text-slate-700 truncate flex-1">{t.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleTemplateTest(t.id)}
+                                      className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                                      title="Kaldır"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                      <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-500">Toplam {templateTestIds.size} test seçili</span>
+                        <button
+                          type="button"
+                          onClick={() => setTemplateTestIds(new Set())}
+                          className="text-[10px] font-bold text-red-500 hover:text-red-600"
+                        >
+                          Tümünü Temizle
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+              <p className="text-[11px] text-slate-500">
+                <ClipboardList size={11} className="inline mr-1 text-slate-400"/>
+                Şablon, teklif ve tarama oluştururken otomatik önerilir
+              </p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setShowTemplateModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 transition-colors">
+                  İptal
+                </button>
+                <button
+                  onClick={saveTemplate}
+                  disabled={templateTestIds.size === 0}
+                  className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors"
+                >
+                  <Save size={13}/> Şablonu Kaydet
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Confirm Modals */}
       <ConfirmModal
