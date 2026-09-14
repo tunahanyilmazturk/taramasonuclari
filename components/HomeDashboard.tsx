@@ -110,7 +110,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
               <Plus size={15} /> Yeni Sonuç
             </button>
             <button
-              onClick={() => onNavigate('quotes')}
+              onClick={() => onNavigate('quotes/new')}
               className="flex items-center gap-2 px-5 py-2.5 bg-white/10 border border-white/15 text-white text-xs font-bold rounded-xl hover:bg-white/20 transition-all active:scale-95 backdrop-blur"
             >
               <FileText size={15} /> Yeni Teklif
@@ -185,7 +185,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
             <div className="py-10 text-center">
               <CalendarDays size={24} className="mx-auto text-slate-300 mb-2" />
               <p className="text-xs text-slate-400">Planlanan tarama yok</p>
-              <button onClick={() => onNavigate('screenings')} className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-700">Tarama Planla →</button>
+              <button onClick={() => onNavigate('screenings/new')} className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-700">Tarama Planla →</button>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -268,7 +268,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ companies, records
                 const st = QUOTE_STATUS_LABEL[q.status] ?? QUOTE_STATUS_LABEL.taslak;
                 const total = q.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
                 return (
-                  <button key={q.id} onClick={() => onNavigate('quotes')} className="w-full flex items-center gap-3 px-5 py-3 hover:bg-blue-50/40 transition-colors text-left">
+                  <button key={q.id} onClick={() => onNavigate('quotes/' + q.id)} className="w-full flex items-center gap-3 px-5 py-3 hover:bg-blue-50/40 transition-colors text-left">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-slate-800 truncate">{q.title || companyName(q.companyId)}</p>
                       <p className="text-[10px] text-slate-400 font-mono mt-0.5">{q.quoteNumber} · {new Date(q.createdAt).toLocaleDateString('tr-TR')}</p>

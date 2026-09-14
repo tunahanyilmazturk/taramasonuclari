@@ -21,6 +21,8 @@ interface QuotesProps {
   allTests: TestDefinition[];
   onGoToDashboard?: () => void;
   detailQuoteId?: string;   // #/quotes/<id> alt rotasından gelen teklif kimliği
+  initialOpenCreate?: boolean; // firma detayından "Yeni Teklif" ile gelindiğinde sihirbazı aç
+  initialCompanyId?: string; // firma detayından gelindiğinde seçili firma
   onNavigate?: (route: string) => void;
   onBack?: (fallback: string) => void; // uygulama içi geri — önceki sayfaya döner
 }
@@ -409,7 +411,7 @@ const QuoteDocument: React.FC<{ quote: Pick<Quote, 'quoteNumber' | 'title' | 'co
   );
 };
 
-export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashboard, detailQuoteId, onNavigate, onBack }) => {
+export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashboard, detailQuoteId, initialOpenCreate, initialCompanyId, onNavigate, onBack }) => {
   const [quotes, setQuotes] = useState<Quote[]>(() => storageService.getQuotes());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | QuoteStatus | 'expired'>('all');
@@ -515,17 +517,20 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
   }), [quotes]);
 
   // ── Sihirbaz ──
-  const openCreate = () => {
+  const openCreate = (presetCompanyId?: string) => {
     const draft = storageService.getQuoteDraft<{ form: QuoteForm; wizardStep: number; editingId: string | null }>();
-    if (draft?.form) {
+    if (draft?.form && !presetCompanyId) {
       // Yarım kalan taslak varsa kaldığı yerden devam et
       setForm(draft.form);
       setEditingId(draft.editingId ?? null);
       setWizardStep(draft.wizardStep || 1);
       setDraftRestored(true);
     } else {
+      // presetCompanyId varsa (firma detayından gelindi) veya taslak yoksa boş form aç
+      const baseForm = emptyForm(nextQuoteNumber());
+      if (presetCompanyId) baseForm.companyId = presetCompanyId;
       setEditingId(null);
-      setForm(emptyForm(nextQuoteNumber()));
+      setForm(baseForm);
       setWizardStep(1);
       setDraftRestored(false);
     }
@@ -536,6 +541,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     setLocalDetailId(null);
     onNavigate?.('quotes');
   };
+
+  // Firma detayından "Yeni Teklif" ile gelindiğinde sihirbazı otomatik aç
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (initialOpenCreate) openCreate(initialCompanyId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   /** Taslağı sıfırla — geri yüklenen taslağı atıp temiz form aç */
   const resetDraft = () => {
@@ -922,7 +935,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
               <p className="text-xs text-slate-500 mt-1">Firmalara test paketi bazlı fiyat teklifi hazırlayın ve onay sürecini takip edin</p>
             </div>
             <button
-              onClick={openCreate}
+              onClick={() => openCreate()}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200 active:scale-95 shrink-0"
             >
               <Plus size={16} /> Yeni Teklif
@@ -1002,7 +1015,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                   : 'Arama veya filtre kriterlerini değiştirmeyi deneyin.'}
               </p>
               {quotes.length === 0 && (
-                <button onClick={openCreate} className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200">
+                <button onClick={() => openCreate()} className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200">
                   <Plus size={16} /> Teklif Oluştur
                 </button>
               )}

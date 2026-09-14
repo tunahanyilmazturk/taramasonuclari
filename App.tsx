@@ -357,13 +357,15 @@ function App() {
         />
       )}
       
-      {activeTab === 'screenings' && <Screenings companies={companies} allTests={masterTests} initialOpenCreate={hash === 'screenings/new'} onNavigate={navigate} onBack={goBack} />}
+      {activeTab === 'screenings' && <Screenings companies={companies} allTests={masterTests} initialOpenCreate={hash.startsWith('screenings/new')} initialCompanyId={hash.split('/')[2]} onNavigate={navigate} onBack={goBack} />}
       {activeTab === 'quotes' && (
         <Quotes
           companies={companies}
           allTests={masterTests}
           onGoToDashboard={() => navigate('dashboard')}
-          detailQuoteId={hash.startsWith('quotes/') ? hash.split('/')[1] : undefined}
+          detailQuoteId={hash.startsWith('quotes/') && hash.split('/')[1] !== 'new' ? hash.split('/')[1] : undefined}
+          initialOpenCreate={hash.startsWith('quotes/new')}
+          initialCompanyId={hash.split('/')[2]}
           onNavigate={navigate}
           onBack={goBack}
         />

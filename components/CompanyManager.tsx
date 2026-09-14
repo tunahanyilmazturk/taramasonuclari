@@ -357,10 +357,10 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
               <ArrowLeft size={15} /> Firmalara Dön
             </button>
             <div className="flex items-center gap-2 flex-wrap">
-              <button onClick={() => onNavigate?.('quotes')} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
+              <button onClick={() => onNavigate?.('quotes/new/' + detailCompany.id)} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
                 <FileText size={13} /> Yeni Teklif
               </button>
-              <button onClick={() => onNavigate?.('screenings')} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
+              <button onClick={() => onNavigate?.('screenings/new/' + detailCompany.id)} className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-white border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-700 rounded-xl transition-colors">
                 <Stethoscope size={13} /> Yeni Tarama
               </button>
               <span className="w-px h-5 bg-slate-200 mx-1 hidden sm:block" />

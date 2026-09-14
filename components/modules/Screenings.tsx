@@ -202,11 +202,12 @@ interface ScreeningsProps {
   companies: Company[];
   allTests: TestDefinition[];
   initialOpenCreate?: boolean;
+  initialCompanyId?: string; // firma detayından "Yeni Tarama" ile gelindiğinde seçili firma
   onNavigate?: (route: string) => void;
   onBack?: (fallback: string) => void;
 }
 
-export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, initialOpenCreate, onNavigate, onBack }) => {
+export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, initialOpenCreate, initialCompanyId, onNavigate, onBack }) => {
   const [screenings, setScreenings] = useState<Screening[]>(() => storageService.getScreenings());
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | ScreeningStatus>('all');
@@ -283,9 +284,9 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
     }
   }, [view, form, wizardStep, editingId]);
 
-  const openCreate = () => {
+  const openCreate = (presetCompanyId?: string) => {
     const draft = storageService.getScreeningDraft<{ form: Omit<ScreeningForm, 'testIds'> & { testIds: string[] }; wizardStep: number; editingId: string | null }>();
-    if (draft?.form) {
+    if (draft?.form && !presetCompanyId) {
       const f = draft.form as unknown as Partial<ScreeningForm>;
       setForm({
         companyId: f.companyId ?? '',
@@ -308,8 +309,15 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
       setWizardStep(draft.wizardStep || 1);
       setDraftRestored(true);
     } else {
+      // presetCompanyId varsa (firma detayından gelindi) veya taslak yoksa boş form aç
+      const baseForm = emptyForm();
+      if (presetCompanyId) {
+        const company = companies.find(c => c.id === presetCompanyId);
+        baseForm.companyId = presetCompanyId;
+        baseForm.plannedCount = company?.employeeCount?.toString() || '';
+      }
       setEditingId(null);
-      setForm(emptyForm());
+      setForm(baseForm);
       setWizardStep(1);
       setDraftRestored(false);
     }
@@ -319,10 +327,10 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
     onNavigate?.('screenings/new');
   };
 
-  /** Takvim'den "Tarama Planla" ile gelindiğinde sihirbazı otomatik aç */
+  /** Takvim'den "Tarama Planla" veya firma detayından "Yeni Tarama" ile gelindiğinde sihirbazı otomatik aç */
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (initialOpenCreate) openCreate();
+    if (initialOpenCreate) openCreate(initialCompanyId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
@@ -552,7 +560,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
               <p className="text-xs text-slate-500 mt-1">Mobil sağlık taraması operasyonlarını planlayın ve takip edin</p>
             </div>
             <button
-              onClick={openCreate}
+              onClick={() => openCreate()}
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200 active:scale-95 shrink-0"
             >
               <Plus size={16} /> Yeni Tarama
@@ -600,7 +608,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                   : 'Arama veya filtre kriterlerini değiştirmeyi deneyin.'}
               </p>
               {screenings.length === 0 && (
-                <button onClick={openCreate} className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200">
+                <button onClick={() => openCreate()} className="mt-5 flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-200">
                   <Plus size={16} /> Tarama Planla
                 </button>
               )}

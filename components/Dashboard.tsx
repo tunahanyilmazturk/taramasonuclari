@@ -917,8 +917,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { label: 'Yeni Sonuç', desc: 'PDF yükle veya manuel gir', icon: Plus, color: 'blue', onClick: startNewResult },
-              { label: 'Yeni Tarama', desc: 'Tarama planla', icon: Stethoscope, color: 'emerald', onClick: () => onNavigate?.('screenings') },
-              { label: 'Yeni Teklif', desc: 'Firmaya teklif ver', icon: FileText, color: 'violet', onClick: () => onNavigate?.('quotes') },
+              { label: 'Yeni Tarama', desc: 'Tarama planla', icon: Stethoscope, color: 'emerald', onClick: () => onNavigate?.('screenings/new') },
+              { label: 'Yeni Teklif', desc: 'Firmaya teklif ver', icon: FileText, color: 'violet', onClick: () => onNavigate?.('quotes/new') },
               { label: 'Firma Ekle', desc: 'Yeni firma tanımla', icon: Building2, color: 'amber', onClick: () => onNavigate?.('companies') }
             ].map(action => {
               const Icon = action.icon;
