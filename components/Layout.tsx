@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Activity, LayoutDashboard, Building2, Menu, ChevronLeft, ChevronRight, ChevronDown, LogOut, FlaskConical, Settings as SettingsIcon, Search, Bell, FileText, UserCheck, Stethoscope, CalendarDays, Package, HardHat, Home, Sun, Moon, type LucideIcon } from 'lucide-react';
-import { User, Company, PatientRecord, OrgInfo, AppearanceSettings } from '../types';
+import { User, Company, PatientRecord, AppearanceSettings } from '../types';
 import { storageService } from '../services/storageService';
 import { updateAppearance } from '../services/appearance';
-import { getImageUrl } from '../services/logoStorage';
 
 interface SidebarStats {
     records: number;
@@ -33,7 +32,6 @@ interface LayoutProps {
   stats?: SidebarStats;
   companies?: Company[];
   records?: PatientRecord[];
-  org?: OrgInfo;
 }
 
 const getInitials = (name: string) =>
@@ -55,26 +53,10 @@ const PAGE_META: Record<string, { title: string; group: string }> = {
     settings: { title: 'Ayarlar', group: 'Sistem' }
 };
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, currentUser, onLogout, stats, companies = [], records = [], org }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, currentUser, onLogout, stats, companies = [], records = [] }) => {
   const [isMobileOpen, setMobileOpen] = useState(false);
   const [isDesktopCollapsed, setDesktopCollapsed] = useState(() => storageService.getAppearance().sidebarCollapsed);
   const [edgeTooltip, setEdgeTooltip] = useState<{ label: string; badge?: number; top: number } | null>(null);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-
-  // Kurum logosu varsa yükle — org değişince de yeniden yükle (logo güncellenmiş olabilir)
-  useEffect(() => {
-    let cancelled = false;
-    const loadLogo = async () => {
-      if (org?.logoKey) {
-        const url = await getImageUrl(org.logoKey);
-        if (!cancelled && url) setLogoUrl(url);
-      } else if (!cancelled) {
-        setLogoUrl(null);
-      }
-    };
-    loadLogo();
-    return () => { cancelled = true; };
-  }, [org]);
 
   // Topbar state
   const [searchQuery, setSearchQuery] = useState('');
@@ -253,13 +235,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
             <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl blur-md opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
                 <div className="relative w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-inner border border-white/10 shrink-0 overflow-hidden">
-                    {logoUrl ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Activity size={22} className="drop-shadow-sm" />}
+                    <Activity size={22} className="drop-shadow-sm" />
                 </div>
             </div>
             {!isDesktopCollapsed && (
               <div className="flex flex-col animate-in fade-in slide-in-from-left-2 duration-500 min-w-0">
-                  <h1 className="font-bold text-xl tracking-tight text-slate-900 leading-none truncate max-w-[170px]">{org?.name || 'HanTech'}</h1>
-                  <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mt-1 truncate max-w-[170px]">{org?.tagline || 'Mobil Sağlık'}</span>
+                  <h1 className="font-bold text-xl tracking-tight text-slate-900 leading-none truncate max-w-[170px]">HanTech</h1>
+                  <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest mt-1 truncate max-w-[170px]">Mobil Sağlık</span>
               </div>
             )}
           </a>
@@ -369,14 +351,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                 <Menu size={20} />
             </button>
             <div className="md:hidden flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white overflow-hidden">{logoUrl ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Activity size={17}/>}</div>
-                <span className="font-bold text-slate-800">{org?.name || 'HanTech'}</span>
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white overflow-hidden"><Activity size={17}/></div>
+                <span className="font-bold text-slate-800">HanTech</span>
             </div>
 
             {/* Desktop: breadcrumb + sayfa başlığı */}
             <div className="hidden md:block min-w-0">
                 <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                    <span>{org?.name || 'HanTech OSGB'}</span>
+                    <span>HanTech OSGB</span>
                     <ChevronRight size={10} />
                     <span className="text-blue-600">{pageMeta.group}</span>
                 </div>

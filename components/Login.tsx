@@ -168,8 +168,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onLoadDemoData }) => {
                   <HeartPulse size={24} />
                 </div>
                 <div>
-                  <h1 className="text-xl font-black tracking-tight text-slate-800 leading-none">{storageService.getOrgInfo().name}</h1>
-                  <p className="text-[11px] text-slate-500 font-medium mt-1">{storageService.getOrgInfo().tagline || 'Mobil Sağlık Taraması Yönetim Platformu'}</p>
+                  <h1 className="text-xl font-black tracking-tight text-slate-800 leading-none">HanTech</h1>
+                  <p className="text-[11px] text-slate-500 font-medium mt-1">Mobil Sağlık Taraması Yönetim Platformu</p>
                 </div>
               </div>
 

@@ -287,7 +287,6 @@ function App() {
       stats={{ records: records.length, companies: companies.length, tests: masterTests.length, users: storageService.getUsers().length }}
       companies={companies}
       records={records}
-      org={orgInfo}
     >
       
       {/* MODERN TOAST CONTAINER */}
