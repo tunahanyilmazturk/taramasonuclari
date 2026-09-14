@@ -229,8 +229,8 @@ const buildAliases = (test: TestDefinition): string[] => {
         'servikal_grafi': ['servikal grafi', 'servikal grafide', 'servikal vertebra grafi', 'servikal', 'cervical', 'iki yönlü servikal', 'servikal vertebra'],
         // Lumbosakral Grafi — radyoloji raporu
         'lumbosakral_grafi': ['lumbosakral grafi', 'lumbosakral grafide', 'lumbosakral', 'lumbar', 'iki yönlü lumbosakral', 'lumbosakral vertebra', 'lomber'],
-        // Ek-2 Belgesi
-        'ek_2_belgesi': ['ek-2', 'ek 2 belgesi', 'ek-2 belgesi', 'ek2']
+        // Ek-2 Belgesi — İşe Giriş/Periyodik Muayene Formu
+        'ek_2_belgesi': ['ek-2', 'ek 2 belgesi', 'ek-2 belgesi', 'ek2', 'işe giriş', 'periyodik muayene', 'muayene formu', 'işe giriş / periyodik']
     };
 
     const testKeyLower = normalizeTr(test.key);
@@ -284,9 +284,10 @@ const isHeaderOnly = (value: string): boolean => {
 /**
  * Çok satırlı bölüm taraması — karmaşık testler için (göz, ekg, odyometri, akciğer, sft).
  * Eşleşen satır + sonraki ~8 satırı birleştirip sonuç arar.
+ * Ek-2 belgesi tüm formu tarar (çok sayfalı).
  */
 const extractSectionValue = (lines: string[], startIdx: number, test: TestDefinition): string | undefined => {
-    const SECTION_LINES = 8;
+    const SECTION_LINES = test.key.includes('ek_2') ? 200 : 8;
     const endIdx = Math.min(startIdx + SECTION_LINES, lines.length);
     const sectionText = lines.slice(startIdx, endIdx).join('\n');
 
@@ -480,9 +481,86 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
         if (pathMatch) return `Bulgu: ${pathMatch[0]}`;
     }
 
-    // Ek-2 Belgesi — henüz taranmıyor, açık bırakıldı
+    // Ek-2 Belgesi — İşe Giriş/Periyodik Muayene Formu detaylı çıkarım
     if (test.key.includes('ek_2')) {
-        // Ek-2 belgesi manuel olarak taranacak — otomatik çıkarım yok
+        const sectionLines = cleaned.split('\n');
+        const parts: string[] = [];
+
+        // ── ÇALIŞANIN bölümü — kişisel bilgiler ──
+        const findAfter = (pattern: RegExp): string | undefined => {
+            for (let i = 0; i < sectionLines.length; i++) {
+                const m = sectionLines[i].match(pattern);
+                if (m) {
+                    // Değer aynı satırda olabilir veya sonraki satırda
+                    const after = m[2]?.trim();
+                    if (after && after.length > 1) return after;
+                    // Sonraki satırı dene
+                    if (i + 1 < sectionLines.length) {
+                        const next = sectionLines[i + 1].trim();
+                        if (next && next.length > 1) return next;
+                    }
+                }
+            }
+            return undefined;
+        };
+
+        // Adı ve Soyadı
+        const name = findAfter(/ad[iıİ]\s+ve\s+soyad[iıİ]\s*[:=]?\s*(.*)/i);
+        if (name) parts.push(`Ad: ${name}`);
+
+        // Doğum Yeri ve Tarihi
+        const birth = findAfter(/do[gğ]um\s+yeri\s+ve\s+tarihi\s*[:=]?\s*(.*)/i);
+        if (birth) parts.push(`Doğum: ${birth}`);
+
+        // Cinsiyeti
+        const gender = findAfter(/cinsiyeti?\s*[:=]?\s*(.*)/i);
+        if (gender) parts.push(`Cinsiyet: ${gender}`);
+
+        // Tel No / E-Posta
+        const phone = findAfter(/tel\s+no\s*[/\\]?\s*e-?posta\s*[:=]?\s*(.*)/i);
+        if (phone) parts.push(`Tel: ${phone}`);
+
+        // Yaptığı İş / Çalıştığı Bölüm
+        const job = findAfter(/yapt[iıİ][gğ][iıİ]\s+i[sş]\s*[/\\]?\s*[cç]al[iıİ][sş]t[iıİ][gğ][iıİ]\s+b[oö]l[uü]m\s*[:=]?\s*(.*)/i)
+            || findAfter(/[cç]al[iıİ][sş]t[iıİ][gğ][iıİ]\s+b[oö]l[uü]m\s*[:=]?\s*(.*)/i);
+        if (job) parts.push(`İş: ${job}`);
+
+        // Kan Grubu
+        const blood = findAfter(/kan\s+grubu\s*[:=]?\s*(.*)/i);
+        if (blood) parts.push(`Kan: ${blood}`);
+
+        // ── FİZİK MUAYENE — boy, kilo, VKİ ──
+        const boyMatch = cleaned.match(/boy\s*[:=]?\s*(\d+)\s*(?:cm)?/i);
+        const kiloMatch = cleaned.match(/kilo\s*[:=]?\s*(\d+)\s*(?:kg)?/i);
+        const vkiMatch = cleaned.match(/v[üu]cut\s+kitle\s+[iıİ]ndeksi\s*[:=]?\s*([\d.,]+)/i);
+        const physical: string[] = [];
+        if (boyMatch) physical.push(`Boy: ${boyMatch[1]} cm`);
+        if (kiloMatch) physical.push(`Kilo: ${kiloMatch[1]} kg`);
+        if (vkiMatch) physical.push(`VKİ: ${vkiMatch[1]}`);
+        if (physical.length > 0) parts.push(physical.join(', '));
+
+        // ── KANAAT VE SONUÇ bölümü ──
+        const kanaatIdx = cleaned.search(/kanaat\s+ve\s+sonu[cç]/i);
+        if (kanaatIdx >= 0) {
+            // KANAAT VE SONUÇ'tan sonraki metni al
+            const kanaatText = cleaned.substring(kanaatIdx).replace(/kanaat\s+ve\s+sonu[cç]\s*\*?\s*[:=]?\s*/i, '').trim();
+            // Numaralı satırları birleştir
+            const kanaatLines = kanaatText.split('\n')
+                .map(l => l.replace(/^\d+[-.)]?\s*/, '').trim())
+                .filter(l => l.length > 3 && !l.startsWith('(*'));
+            // İlk anlamlı satırı al (genellikle sonuç cümlesi)
+            if (kanaatLines.length > 0) {
+                // "içinde bedenen ve ruhen çalışmaya elverişlidir" kalıbı yaygın
+                const elverisli = kanaatLines.find(l => includesTr(normalizeTr(l), 'elveri') || includesTr(normalizeTr(l), 'çalışabilir') || includesTr(normalizeTr(l), 'uygun'));
+                if (elverisli) {
+                    parts.push(`Sonuç: ${elverisli}`);
+                } else {
+                    parts.push(`Sonuç: ${kanaatLines[0]}`);
+                }
+            }
+        }
+
+        if (parts.length > 0) return parts.join(' | ');
         return undefined;
     }
 
