@@ -7,6 +7,8 @@ import {
   Download, Upload, Zap, X
 } from 'lucide-react';
 import { DEFAULT_TESTS, TEST_DEFAULT_PRICES, TEST_CATEGORIES, testCategory } from '../constants';
+import { usePagination } from '../hooks/usePagination';
+import { PaginationControls } from './shared/PaginationControls';
 
 interface TestConfigProps {
   tests: TestDefinition[];
@@ -678,6 +680,14 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
     return result;
   }, [editingTests, searchTerm, typeFilter]);
 
+  // Sayfalama — arama aktifken tüm sonuçlar gösterilir
+  const {
+      paginatedItems: paginatedTests,
+      currentPage, totalPages, pageSize,
+      setCurrentPage, setPageSize,
+      totalItems: pagedTotal, startIndex, endIndex
+  } = usePagination(filteredTests, 'testpool', 15);
+
   const renderSubTests = React.useCallback((subTests: TestDefinition[], depth: number) => {
       return subTests.map((sub, i) => (
           <TestRow 
@@ -869,13 +879,13 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredTests.length > 0 ? (
-                    filteredTests.map((test, i, arr) => (
-                        <TestRow 
+                    paginatedTests.map((test, i) => (
+                        <TestRow
                             key={test.id}
                             test={test}
                             depth={0}
-                            index={i}
-                            siblingsCount={arr.length}
+                            index={startIndex + i}
+                            siblingsCount={filteredTests.length}
                             expandedPanels={expandedPanels}
                             searchTerm={searchTerm}
                             onToggleExpand={toggleExpand}
@@ -906,10 +916,19 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
             </table>
         </div>
         
-        {/* Footer Info */}
-        <div className="p-4 bg-slate-50 text-[11px] text-slate-400 text-center border-t border-slate-100 font-medium">
-            Toplam {editingTests.length} ana test ve alt parametreleri listeleniyor. Sıralamayı değiştirmek için okları kullanın.
-        </div>
+        {/* Sayfalama */}
+        <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={pagedTotal}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[10, 15, 25, 50, 100]}
+            itemName="test"
+        />
       </div>
 
       {/* --- DELETE CONFIRMATION MODAL --- */}
