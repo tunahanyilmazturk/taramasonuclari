@@ -529,9 +529,15 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     pageSize: 'A4',
     pageMargins: [40, 45, 40, 55],
     footer: (page: number, pages: number) => ({
-      columns: [
-        { text: `${org.name} — ${quote.quoteNumber}`, style: 'footer' },
-        { text: `Sayfa ${page} / ${pages}`, style: 'footer', alignment: 'right' }
+      stack: [
+        { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 0.5, lineColor: C.line }], margin: [0, 0, 0, 6] },
+        {
+          columns: [
+            { text: `${org.name} — ${quote.quoteNumber}`, style: 'footer' },
+            { text: `Sayfa ${page} / ${pages}`, style: 'footer', alignment: 'right' }
+          ]
+        },
+        { text: 'Sağlıklı çalışanlar, güvenli yarınlar için — Mobil sağlık taramalarında güvenilir çözüm ortağınız.', style: 'slogan', alignment: 'center' }
       ],
       margin: [40, 0, 40, 0]
     }),
@@ -567,7 +573,8 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
       terms: { fontSize: 8.5, color: C.muted, lineHeight: 1.4, margin: [0, 0, 0, 3] },
       signerOrg: { fontSize: 10, bold: true, color: C.ink },
       signer: { fontSize: 9.5, bold: true, color: C.ink, decoration: 'underline' as const },
-      footer: { fontSize: 7.5, color: C.muted }
+      footer: { fontSize: 7.5, color: C.muted },
+      slogan: { fontSize: 8, color: C.primary, italics: true, margin: [0, 4, 0, 0], characterSpacing: 0.3 }
     }
   };
 };
