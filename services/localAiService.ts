@@ -17,7 +17,7 @@ interface MetadataPatterns {
 }
 
 const META: MetadataPatterns = {
-    nameKeys: ['sayın', 'adı soyadı', 'ad soyad', 'adı:', 'hasta:', 'hastanın adı', 'adı soyadı:'],
+    nameKeys: ['sayın', 'adı soyadı', 'ad soyad', 'adı:', 'hasta:', 'hastanın adı', 'adı soyadı:', 'çalışanın adı soyadı', 'çalışan adı soyadı', 'çalışanın adı', 'çalışan adı'],
     regKeys: ['protokol no', 'protokol', 'dosya no', 'hasta no', 'sicil no', 'sicil', 't.c. no', 'tc no', 'id no', 'hasta id'],
     jobKeys: ['görevi', 'mesleği', 'bölümü', 'departmanı', 'unvanı', 'pozisyon', 'görev', 'işyeri bölümü'],
     dateKeys: ['numune alma tarihi', 'numune tarihi', 'işlem tarihi', 'rapor tarihi', 'sonuç tarihi', 'onay tarihi', 'istek tarihi', 'tarih']
@@ -45,7 +45,8 @@ const stripTrailingFields = (value: string): string => {
 };
 
 const extractField = (lines: string[], keys: string[]): string => {
-    for (const line of lines) {
+    for (let li = 0; li < lines.length; li++) {
+        const line = lines[li];
         const norm = normalizeTr(line);
         for (const key of keys) {
             const normKey = normalizeTr(key);
@@ -55,6 +56,14 @@ const extractField = (lines: string[], keys: string[]): string => {
             value = value.replace(/^[\s:=-]+/, '').trim();
             value = stripTrailingFields(value);
             if (value) return value;
+            // Etiket bulundu ama değer aynı satırda yok — sonraki satıra bak
+            if (li + 1 < lines.length) {
+                const next = lines[li + 1].trim();
+                if (next && next.length > 1 && !/^\d+[-.)]/.test(next)) {
+                    const nextVal = stripTrailingFields(next.replace(/^[\s:=-]+/, '').trim());
+                    if (nextVal) return nextVal;
+                }
+            }
         }
     }
     return '';
@@ -87,7 +96,12 @@ const extractPatientName = (lines: string[]): string => {
             if (!includesTr(t, 'laboratuvar') && !includesTr(t, 'sonuç') && !includesTr(t, 'rapor') &&
                 !includesTr(t, 'tahlil') && !includesTr(t, 'test') && !includesTr(t, 'hastane') &&
                 !includesTr(t, 'adı') && !includesTr(t, 'soyadı') && !includesTr(t, 'hasta') &&
-                !includesTr(t, 'tarih') && !includesTr(t, 'numune') && !includesTr(t, 'protokol')) {
+                !includesTr(t, 'tarih') && !includesTr(t, 'numune') && !includesTr(t, 'protokol') &&
+                !includesTr(t, 'uluslararası') && !includesTr(t, 'sınıflandırılması') &&
+                !includesTr(t, 'için') && !includesTr(t, 'çalışanın') && !includesTr(t, 'çalışan') &&
+                !includesTr(t, 'hastalıkların') && !includesTr(t, 'icd') && !includesTr(t, 'tanı') &&
+                !includesTr(t, 'bölüm') && !includesTr(t, 'muayene') && !includesTr(t, 'formu') &&
+                !includesTr(t, 'sayfa') && !includesTr(t, 'hekim') && !includesTr(t, 'imza')) {
                 return t;
             }
         }
