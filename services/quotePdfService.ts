@@ -101,43 +101,57 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
   // SAYFA 1 — KURUMSAL KAPAK
   // ════════════════════════════════════════════════════
 
-  // ── Başlık bandı: mavi zeminli kurum kimliği ──
+  // ── Başlık bandı: beyaz zemin, alt mavi çizgi ──
   content.push({
-    table: {
-      widths: ['*'],
-      body: [[{
-        columns: [
-          ...(logoDataUrl
-            ? [{ width: 56 as const, image: logoDataUrl, fit: [48, 48] as [number, number], margin: [0, 0, 12, 0] as [number, number, number, number] }]
-            : []),
-          {
-            width: '*',
-            stack: [
-              { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
-              ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
-            ],
-            margin: [logoDataUrl ? 0 : 4, 6, 0, 6] as [number, number, number, number]
-          },
-          {
-            width: 'auto',
-            stack: [
-              { text: 'FİYAT TEKLİFİ', style: 'docTitle', alignment: 'right' },
-              { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
-            ],
-            margin: [0, 6, 0, 6] as [number, number, number, number]
-          }
+    columns: [
+      ...(logoDataUrl
+        ? [{ width: 52 as const, image: logoDataUrl, fit: [48, 48] as [number, number], margin: [0, 2, 12, 0] as [number, number, number, number] }]
+        : []),
+      {
+        width: '*',
+        stack: [
+          { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
+          ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
         ],
-        margin: [16, 14, 16, 14] as [number, number, number, number]
-      }]]
-    },
-    layout: {
-      fillColor: () => C.primary,
-      hLineWidth: () => 0, vLineWidth: () => 0,
-      paddingLeft: () => 0, paddingRight: () => 0,
-      paddingTop: () => 0, paddingBottom: () => 0
-    },
-    margin: [0, 0, 0, 16]
+        margin: [logoDataUrl ? 0 : 0, 4, 0, 4] as [number, number, number, number]
+      },
+      {
+        width: 'auto',
+        stack: [
+          { text: 'FİYAT TEKLİFİ', style: 'docTitle', alignment: 'right' },
+          { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
+        ],
+        margin: [0, 4, 0, 4] as [number, number, number, number]
+      }
+    ],
+    margin: [0, 0, 0, 4]
   });
+  // Çift çizgi: ince mavi + kalın mavi
+  content.push({
+    canvas: [
+      { type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: C.primarySofter },
+      { type: 'line', x1: 0, y1: 3, x2: 515, y2: 3, lineWidth: 2.5, lineColor: C.primary }
+    ],
+    margin: [0, 0, 0, 14]
+  });
+
+  // ── Kurum kısa bilgi şeridi (boşluğu değerlendir) ──
+  const orgQuickInfo: Content[] = [];
+  if (org.phone) orgQuickInfo.push({ text: `☎ ${org.phone}`, style: 'quickInfo' });
+  if (org.email) orgQuickInfo.push({ text: `✉ ${org.email}`, style: 'quickInfo' });
+  if (org.web) orgQuickInfo.push({ text: `🌐 ${org.web}`, style: 'quickInfo' });
+  if (org.address) orgQuickInfo.push({ text: `📍 ${org.address}`, style: 'quickInfo' });
+  if (orgQuickInfo.length) {
+    content.push({
+      columns: orgQuickInfo.map((item, i) => ({
+        width: i === orgQuickInfo.length - 1 ? '*' : 'auto',
+        text: (item as { text: string }).text,
+        style: 'quickInfo',
+        alignment: i === orgQuickInfo.length - 1 ? ('right' as const) : ('left' as const)
+      })),
+      margin: [0, 0, 0, 14]
+    });
+  }
 
   // ── Bilgi bloğu: firma | teklif detayları (iki kart) ──
   const infoRows: [string, string][] = [
@@ -321,39 +335,34 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
   // ════════════════════════════════════════════════════
   const page2: Content[] = [];
 
-  // ── Sayfa 2 başlık bandı ──
+  // ── Sayfa 2 başlık bandı: beyaz zemin, alt mavi çizgi ──
   page2.push({
-    table: {
-      widths: ['*'],
-      body: [[{
-        columns: [
-          {
-            width: '*',
-            stack: [
-              { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
-              ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
-            ],
-            margin: [4, 6, 0, 6] as [number, number, number, number]
-          },
-          {
-            width: 'auto',
-            stack: [
-              { text: 'TEKLİF KALEMLERİ', style: 'docTitle', alignment: 'right' },
-              { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
-            ],
-            margin: [0, 6, 0, 6] as [number, number, number, number]
-          }
+    columns: [
+      {
+        width: '*',
+        stack: [
+          { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
+          ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
         ],
-        margin: [16, 14, 16, 14] as [number, number, number, number]
-      }]]
-    },
-    layout: {
-      fillColor: () => C.primary,
-      hLineWidth: () => 0, vLineWidth: () => 0,
-      paddingLeft: () => 0, paddingRight: () => 0,
-      paddingTop: () => 0, paddingBottom: () => 0
-    },
-    margin: [0, 0, 0, 16]
+        margin: [0, 4, 0, 4] as [number, number, number, number]
+      },
+      {
+        width: 'auto',
+        stack: [
+          { text: 'TEKLİF KALEMLERİ', style: 'docTitle', alignment: 'right' },
+          { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
+        ],
+        margin: [0, 4, 0, 4] as [number, number, number, number]
+      }
+    ],
+    margin: [0, 0, 0, 4]
+  });
+  page2.push({
+    canvas: [
+      { type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: C.primarySofter },
+      { type: 'line', x1: 0, y1: 3, x2: 515, y2: 3, lineWidth: 2.5, lineColor: C.primary }
+    ],
+    margin: [0, 0, 0, 14]
   });
 
   // ── Firma özet şeridi ──
@@ -529,10 +538,11 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     content,
     defaultStyle: { fontSize: 9.5, color: C.ink },
     styles: {
-      brand: { fontSize: 17, bold: true, color: C.white, characterSpacing: 0.5 },
-      brandSub: { fontSize: 8.5, color: '#dbeafe', margin: [0, 2, 0, 0] },
-      docTitle: { fontSize: 14, bold: true, color: C.white, characterSpacing: 1 },
-      docNo: { fontSize: 10, bold: true, color: '#dbeafe', margin: [0, 3, 0, 0] },
+      brand: { fontSize: 17, bold: true, color: C.primaryDark, characterSpacing: 0.5 },
+      brandSub: { fontSize: 8.5, color: C.muted, margin: [0, 2, 0, 0] },
+      docTitle: { fontSize: 14, bold: true, color: C.ink, characterSpacing: 1 },
+      docNo: { fontSize: 10, bold: true, color: C.primary, margin: [0, 3, 0, 0] },
+      quickInfo: { fontSize: 8, color: C.muted, margin: [0, 0, 8, 0] },
       blockLabel: { fontSize: 8, bold: true, color: C.primary, characterSpacing: 1.2 },
       cardLabel: { fontSize: 7.5, bold: true, color: C.muted, characterSpacing: 1.2 },
       stripLabel: { fontSize: 7.5, bold: true, color: C.muted, characterSpacing: 1 },
