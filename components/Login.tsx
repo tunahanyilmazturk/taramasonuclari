@@ -100,6 +100,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onLoadDemoData }) => {
       await new Promise(resolve => setTimeout(resolve, 400));
 
       if (user && user.password === hashedPassword) {
+        if (user.active === false) {
+          setIsLoading(false);
+          setError('Bu hesap pasifleştirilmiş. Lütfen yöneticinizle iletişime geçin.');
+          return;
+        }
         storageService.login(user);
         onLogin(user);
         setFailedAttempts(0);

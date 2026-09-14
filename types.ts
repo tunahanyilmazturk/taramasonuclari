@@ -295,6 +295,8 @@ export interface AppState {
   equipment?: Equipment[];
   team?: TeamMember[];
   orgInfo?: OrgInfo; // kurum kimlik bilgileri (yedeklemeye dahil)
+  roles?: Role[]; // roller (yedeklemeye dahil)
+  appearance?: AppearanceSettings; // görünüm ayarları (yedeklemeye dahil)
 }
 
 /** Görünüm ayarları — tarayıcı-bazlı tema tercihleri */

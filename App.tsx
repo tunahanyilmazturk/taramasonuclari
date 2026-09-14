@@ -39,7 +39,7 @@ function App() {
       : activeTab === 'users' ? 'users'
       : activeTab === 'ai' ? 'ai'
       : undefined;
-  if (settingsTab && (settingsTab === 'users' || settingsTab === 'logs') && currentUser?.role !== 'super_admin') {
+  if (settingsTab && (settingsTab === 'users' || settingsTab === 'logs' || settingsTab === 'system' || settingsTab === 'org' || settingsTab === 'ai') && currentUser?.role !== 'super_admin') {
     settingsTab = undefined; // adminOnly sekmeler — yetkisiz deep-link'i engelle
   }
 
@@ -231,6 +231,8 @@ function App() {
       if (state.events) storageService.saveEvents(state.events);
       if (state.equipment) storageService.saveEquipment(state.equipment);
       if (state.team) storageService.saveTeam(state.team);
+      if (state.roles) storageService.saveRoles(state.roles);
+      if (state.appearance) storageService.saveAppearance(state.appearance);
       if (state.orgInfo) {
           storageService.saveOrgInfo(state.orgInfo);
           setOrgInfo(state.orgInfo);
@@ -406,7 +408,9 @@ function App() {
                  events: storageService.getEvents(),
                  equipment: storageService.getEquipment(),
                  team: storageService.getTeam(),
-                 orgInfo
+                 orgInfo,
+                roles: storageService.getRoles(),
+                appearance: storageService.getAppearance()
              }}
              onRestore={handleRestoreState}
              onReset={handleResetState}

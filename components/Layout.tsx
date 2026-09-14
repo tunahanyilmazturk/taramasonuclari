@@ -61,7 +61,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   const [edgeTooltip, setEdgeTooltip] = useState<{ label: string; badge?: number; top: number } | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
-  // Kurum logosu varsa yükle
+  // Kurum logosu varsa yükle — org değişince de yeniden yükle (logo güncellenmiş olabilir)
   useEffect(() => {
     let cancelled = false;
     const loadLogo = async () => {
@@ -74,7 +74,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     };
     loadLogo();
     return () => { cancelled = true; };
-  }, [org?.logoKey]);
+  }, [org]);
 
   // Topbar state
   const [searchQuery, setSearchQuery] = useState('');

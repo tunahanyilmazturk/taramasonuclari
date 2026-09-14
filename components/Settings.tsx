@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { ConfirmModal } from './ConfirmModal';
 import {
   Download, Upload, Trash2, Database, ShieldCheck, AlertTriangle, RefreshCw,
@@ -66,6 +66,20 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
     phone: currentUser?.phone || '',
     jobTitle: currentUser?.jobTitle || ''
   });
+  // currentUser değişince profileForm senkronize et
+  useEffect(() => {
+    if (currentUser) {
+      const sync = () => {
+        setProfileForm({
+          fullName: currentUser.fullName || '',
+          email: currentUser.email || '',
+          phone: currentUser.phone || '',
+          jobTitle: currentUser.jobTitle || ''
+        });
+      };
+      Promise.resolve().then(sync);
+    }
+  }, [currentUser]);
   const [confirmAction, setConfirmAction] = useState<{ title: string; message: string; action: () => void } | null>(null);
 
   // Global Rapor Ayarları (tüm firmaların çıktılarında ortak antet/imza)
@@ -105,6 +119,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { addNotification('error', 'Lütfen bir görsel dosyası seçin.'); return; }
+    if (file.size > 5 * 1024 * 1024) { addNotification('error', 'Dosya 5MB\'dan büyük. Lütfen daha küçük bir görsel seçin.'); return; }
     setLogoUploading(true);
     try {
       const blob = await resizeToBlob(file, 400);
@@ -114,6 +129,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
       const { saveImage } = await import('../services/logoStorage');
       await saveImage(key, blob);
       setOrgForm(p => ({ ...p, logoKey: key }));
+      setLogoUrl(URL.createObjectURL(blob)); // anında önizleme — effect tetiklenmese bile
       addNotification('success', 'Logo yüklendi. Kaydet butonuna basın.');
     } catch (err) {
       console.error(err);
@@ -128,6 +144,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { addNotification('error', 'Lütfen bir görsel dosyası seçin.'); return; }
+    if (file.size > 5 * 1024 * 1024) { addNotification('error', 'Dosya 5MB\'dan büyük. Lütfen daha küçük bir görsel seçin.'); return; }
     setSigUploading(true);
     try {
       const blob = await resizeToBlob(file, 300);
@@ -137,6 +154,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
       const { saveImage } = await import('../services/logoStorage');
       await saveImage(key, blob);
       setOrgForm(p => ({ ...p, signatureKey: key }));
+      setSignatureUrl(URL.createObjectURL(blob)); // anında önizleme
       addNotification('success', 'İmza yüklendi. Kaydet butonuna basın.');
     } catch (err) {
       console.error(err);
@@ -369,10 +387,10 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
         <div className="bg-white border border-slate-200 rounded-2xl p-2 lg:sticky lg:top-20 flex lg:flex-col gap-1 overflow-x-auto">
           {[
               { id: 'profile', icon: UserCircle, label: 'Profilim', desc: 'Kişisel bilgiler' },
-              { id: 'system', icon: HardDrive, label: 'Sistem & Veri', desc: 'Depolama, yedek, rapor' },
-              { id: 'org', icon: Building2, label: 'Kurum Bilgileri', desc: 'Antet, iletişim, imza' },
+              { id: 'system', icon: HardDrive, label: 'Sistem & Veri', desc: 'Depolama, yedek, rapor', adminOnly: true },
+              { id: 'org', icon: Building2, label: 'Kurum Bilgileri', desc: 'Antet, iletişim, imza', adminOnly: true },
               { id: 'appearance', icon: Palette, label: 'Görünüm', desc: 'Tema, renk, yoğunluk' },
-              { id: 'ai', icon: Sparkles, label: 'AI & API', desc: 'Sağlayıcı, anahtar, modeller' },
+              { id: 'ai', icon: Sparkles, label: 'AI & API', desc: 'Sağlayıcı, anahtar, modeller', adminOnly: true },
               { id: 'users', icon: Users, label: 'Kullanıcılar', desc: 'Hesap & rol yönetimi', adminOnly: true },
               { id: 'security', icon: ShieldCheck, label: 'Güvenlik', desc: 'Şifre, oturum' },
               { id: 'logs', icon: History, label: 'İşlem Kayıtları', desc: 'Audit log', adminOnly: true }
@@ -498,7 +516,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
           )}
 
           {/* --- SYSTEM TAB --- */}
-          {activeTab === 'system' && (
+          {activeTab === 'system' && currentUser?.role === 'super_admin' && (
               <div className="p-6 md:p-8 space-y-8 animate-in slide-in-from-bottom-4 duration-300">
 
                   {/* ── SİSTEM DURUMU — yatay şerit ── */}
@@ -721,7 +739,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
           )}
 
           {/* --- KURUM BİLGİLERİ TAB --- */}
-          {activeTab === 'org' && (
+          {activeTab === 'org' && currentUser?.role === 'super_admin' && (
               <div className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300 max-w-4xl">
                   <div className="mb-6">
                       <h3 className="text-lg font-black text-slate-800 flex items-center gap-2"><Building2 size={18} className="text-blue-600"/> Kurum Bilgileri</h3>
@@ -1066,7 +1084,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
           )}
 
           {/* --- AI & API TAB --- */}
-          {activeTab === 'ai' && (
+          {activeTab === 'ai' && currentUser?.role === 'super_admin' && (
               <div className="p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <AiSettings addNotification={addNotification} />
               </div>

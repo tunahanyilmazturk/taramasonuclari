@@ -285,7 +285,15 @@ export const storageService = {
       return DEFAULT_ROLES;
     }
     try {
-      return JSON.parse(data) as Role[];
+      const parsed = JSON.parse(data) as Role[];
+      // Sistem rolleri (role_doktor, role_personel) her zaman mevcut olmalı — silinmişse geri ekle
+      const missing = DEFAULT_ROLES.filter(r => r.isSystem && !parsed.some(p => p.id === r.id));
+      if (missing.length > 0) {
+        const merged = [...parsed, ...missing];
+        localStorage.setItem(KEYS.ROLES, JSON.stringify(merged));
+        return merged;
+      }
+      return parsed;
     } catch {
       localStorage.setItem(KEYS.ROLES, JSON.stringify(DEFAULT_ROLES));
       return DEFAULT_ROLES;

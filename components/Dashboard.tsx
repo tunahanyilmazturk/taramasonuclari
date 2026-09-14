@@ -233,12 +233,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }).sort((a, b) => b.lastDate - a.lastDate);
   }, [companies, records]);
 
-  const overviewStats = useMemo(() => ({
-      totalRecords: records.length,
-      pendingReview: records.filter(r => !r.isReviewed).length,
-      anomalyRecords: records.filter(r => Object.values(r.status).some(isAbnormalStatus)).length,
-      activeCompanies: new Set(records.map(r => r.companyId)).size
-  }), [records]);
+  const overviewStats = useMemo(() => {
+      const todayTs = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00').getTime();
+      const weekAgoTs = todayTs - 7 * 24 * 60 * 60 * 1000;
+      const reviewed = records.filter(r => r.isReviewed).length;
+      const anomalies = records.filter(r => Object.values(r.status).some(isAbnormalStatus)).length;
+      return {
+          totalRecords: records.length,
+          pendingReview: records.filter(r => !r.isReviewed).length,
+          reviewed,
+          anomalyRecords: anomalies,
+          activeCompanies: new Set(records.map(r => r.companyId)).size,
+          todayRecords: records.filter(r => parseTrDate(r.date) === todayTs).length,
+          weekRecords: records.filter(r => parseTrDate(r.date) >= weekAgoTs).length,
+          reviewRate: records.length > 0 ? Math.round((reviewed / records.length) * 100) : 0,
+          anomalyRate: records.length > 0 ? Math.round((anomalies / records.length) * 100) : 0
+      };
+  }, [records]);
 
   // ── Genel bakış: arama + durum filtresi ──
   const [overviewSearch, setOverviewSearch] = useState('');
@@ -902,6 +913,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </button>
           </div>
 
+          {/* Hızlı Aksiyon Kartları */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: 'Yeni Sonuç', desc: 'PDF yükle veya manuel gir', icon: Plus, color: 'blue', onClick: startNewResult },
+              { label: 'Yeni Tarama', desc: 'Tarama planla', icon: Stethoscope, color: 'emerald', onClick: () => onNavigate?.('screenings') },
+              { label: 'Yeni Teklif', desc: 'Firmaya teklif ver', icon: FileText, color: 'violet', onClick: () => onNavigate?.('quotes') },
+              { label: 'Firma Ekle', desc: 'Yeni firma tanımla', icon: Building2, color: 'amber', onClick: () => onNavigate?.('companies') }
+            ].map(action => {
+              const Icon = action.icon;
+              const colorMap: Record<string, string> = {
+                  blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200',
+                  emerald: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border-emerald-200',
+                  violet: 'bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-200',
+                  amber: 'bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200'
+              };
+              return (
+                  <button key={action.label} onClick={action.onClick}
+                      className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all text-left ${colorMap[action.color]}`}>
+                      <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center shrink-0 shadow-sm"><Icon size={18}/></div>
+                      <div className="min-w-0">
+                          <p className="text-sm font-bold truncate">{action.label}</p>
+                          <p className="text-[10px] opacity-70 truncate">{action.desc}</p>
+                      </div>
+                  </button>
+              );
+            })}
+          </div>
+
           {/* Genel İstatistikler — tıklanabilir filtre kartları */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <button
@@ -916,7 +955,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
               className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${recentFilter === 'all' ? 'border-indigo-400 ring-2 ring-indigo-100 shadow-sm' : 'border-slate-200 hover:border-indigo-200'}`}
             >
               <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
-              <div><p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.totalRecords}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Toplam Sonuç</p></div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.totalRecords}</p>
+                  {overviewStats.todayRecords > 0 && <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">+{overviewStats.todayRecords} bugün</span>}
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Toplam Sonuç</p>
+              </div>
             </button>
             <button
               onClick={() => setRecentFilter('pending')}
@@ -930,23 +975,70 @@ export const Dashboard: React.FC<DashboardProps> = ({
               className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${recentFilter === 'anomaly' ? 'border-red-400 ring-2 ring-red-100 shadow-sm' : 'border-slate-200 hover:border-red-200'}`}
             >
               <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18}/></div>
-              <div><p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.anomalyRecords}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bulgulu Kayıt</p></div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.anomalyRecords}</p>
+                  {overviewStats.anomalyRate > 0 && <span className="text-[9px] font-bold text-red-500">%{overviewStats.anomalyRate}</span>}
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bulgulu Kayıt</p>
+              </div>
             </button>
           </div>
 
-          {/* Genel inceleme ilerlemesi */}
-          {records.length > 0 && (
-            <div className="bg-white rounded-2xl border border-slate-200 px-5 py-3.5 flex items-center gap-4">
-              <div className="flex items-center gap-2 shrink-0">
-                <CheckCircle2 size={15} className="text-emerald-500" />
-                <span className="text-xs font-bold text-slate-600">Genel İnceleme İlerlemesi</span>
+          {/* Bugün özeti + Bu hafta + İnceleme ilerlemesi — yan yana */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            {/* Bugün özeti */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-2xl border border-blue-100 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarDays size={15} className="text-blue-600" />
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Bugün</h3>
+                <span className="text-[10px] text-slate-400 ml-auto">{new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}</span>
               </div>
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500" style={{ width: `${reviewProgress}%` }} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-2xl font-black text-blue-700 tabular-nums">{overviewStats.todayRecords}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Yeni Kayıt</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-emerald-700 tabular-nums">{upcomingScreenings.filter(s => s.date === today).length}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Tarama Bugün</p>
+                </div>
               </div>
-              <span className="text-xs font-black text-slate-700 tabular-nums shrink-0">%{reviewProgress}</span>
             </div>
-          )}
+
+            {/* Bu hafta */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 size={15} className="text-slate-500" />
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Bu Hafta</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-2xl font-black text-slate-800 tabular-nums">{overviewStats.weekRecords}</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Yeni Kayıt</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-slate-800 tabular-nums">{overviewStats.reviewRate}%</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">İnceleme Oranı</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Genel inceleme ilerlemesi */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CheckCircle2 size={15} className="text-emerald-500" />
+                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">İnceleme İlerlemesi</h3>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500" style={{ width: `${reviewProgress}%` }} />
+                </div>
+                <span className="text-sm font-black text-slate-700 tabular-nums shrink-0">%{reviewProgress}</span>
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2">{overviewStats.reviewed}/{overviewStats.totalRecords} kayıt incelendi</p>
+            </div>
+          </div>
 
           {/* Yaklaşan Taramalar — Taramalar modülü bağlantısı */}
           {upcomingScreenings.length > 0 && (
