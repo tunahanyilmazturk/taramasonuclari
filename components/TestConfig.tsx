@@ -4,7 +4,7 @@ import { ConfirmModal } from './ConfirmModal';
 import {
   Trash2, Plus, Save, ChevronRight, ChevronDown, FolderTree,
   Search, ArrowUp, ArrowDown, AlignLeft, Copy, RotateCcw, LayoutList, Layers, Hash, AlertTriangle,
-  Download, Upload, Zap, X
+  Download, Upload, Zap, X, DollarSign
 } from 'lucide-react';
 import { DEFAULT_TESTS, TEST_DEFAULT_PRICES, TEST_CATEGORIES, testCategory } from '../constants';
 import { usePagination } from '../hooks/usePagination';
@@ -260,6 +260,11 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
   const [newTestForm, setNewTestForm] = useState({ name: '', unit: '', type: 'numeric' as TestType, category: 'Diğer', min: '', max: '' });
   const [isPanel, setIsPanel] = useState(false);
   const [subParams, setSubParams] = useState<{ name: string; unit: string; min: string; max: string }[]>([{ name: '', unit: '', min: '', max: '' }]);
+  const [showBulkPriceModal, setShowBulkPriceModal] = useState(false);
+  const [bulkMode, setBulkMode] = useState<'percent' | 'fixed'>('percent');
+  const [bulkScope, setBulkScope] = useState<string>('all');
+  const [bulkPercent, setBulkPercent] = useState('10');
+  const [bulkFixed, setBulkFixed] = useState('');
   const importFileRef = useRef<HTMLInputElement>(null);
 
   // Dışarıdan tests güncellenirse ve kullanıcı kirli değilse editörü senkronize et
@@ -434,6 +439,43 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
       setEditingTests(importConfirm.data);
       setIsDirty(true);
       setImportConfirm(null);
+  };
+
+  // --- TOPLU FİYAT GÜNCELLEME ---
+  const bulkAffectedCount = useMemo(() => {
+      return editingTests.filter(t =>
+          bulkScope === 'all' || testCategory(t) === bulkScope
+      ).length;
+  }, [editingTests, bulkScope]);
+
+  const bulkPreview = useMemo(() => {
+      const sample = editingTests.find(t =>
+          bulkScope === 'all' || testCategory(t) === bulkScope
+      );
+      if (!sample) return null;
+      const current = sample.unitPrice ?? TEST_DEFAULT_PRICES[sample.key] ?? 0;
+      if (bulkMode === 'percent') {
+          const pct = parseFloat(bulkPercent) || 0;
+          return { current, next: Math.max(0, Math.round(current * (1 + pct / 100) * 100) / 100) };
+      }
+      const fixed = parseFloat(bulkFixed) || 0;
+      return { current, next: Math.max(0, fixed) };
+  }, [editingTests, bulkScope, bulkMode, bulkPercent, bulkFixed]);
+
+  const applyBulkPrice = () => {
+      const pct = parseFloat(bulkPercent) || 0;
+      const fixed = parseFloat(bulkFixed) || 0;
+      setEditingTests(prev => prev.map(t => {
+          if (bulkScope !== 'all' && testCategory(t) !== bulkScope) return t;
+          if (bulkMode === 'percent') {
+              const current = t.unitPrice ?? TEST_DEFAULT_PRICES[t.key] ?? 0;
+              const next = Math.max(0, Math.round(current * (1 + pct / 100) * 100) / 100);
+              return { ...t, unitPrice: next };
+          }
+          return { ...t, unitPrice: fixed };
+      }));
+      setIsDirty(true);
+      setShowBulkPriceModal(false);
   };
 
   // --- CRUD OPERATIONS ---
@@ -804,6 +846,22 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
                         <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
                     </div>
 
+                    {/* Toplu Fiyat Güncelleme */}
+                    <button
+                        onClick={() => {
+                            setBulkScope('all');
+                            setBulkMode('percent');
+                            setBulkPercent('10');
+                            setBulkFixed('');
+                            setShowBulkPriceModal(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-100 transition-all"
+                        title="Toplu fiyat güncelleme — yüzde veya sabit fiyat"
+                    >
+                        <DollarSign size={14} />
+                        Toplu Fiyat
+                    </button>
+
                     {/* Şablon Ekle */}
                     <div className="relative">
                         <button
@@ -973,6 +1031,136 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
           onConfirm={() => setImportError(null)}
           onCancel={() => setImportError(null)}
       />
+
+      {/* --- BULK PRICE MODAL --- */}
+      {showBulkPriceModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowBulkPriceModal(false)}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                  <div className="p-5 bg-slate-900 text-white flex items-center justify-between">
+                      <h3 className="font-bold text-base flex items-center gap-2">
+                          <DollarSign size={18} className="text-emerald-400"/> Toplu Fiyat Güncelleme
+                      </h3>
+                      <button onClick={() => setShowBulkPriceModal(false)} className="text-slate-400 hover:text-white transition-colors p-1">
+                          <X size={18}/>
+                      </button>
+                  </div>
+
+                  <div className="p-5 space-y-4">
+                      {/* Kapsam */}
+                      <div>
+                          <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Kapsam</label>
+                          <select
+                              value={bulkScope}
+                              onChange={e => setBulkScope(e.target.value)}
+                              className="w-full border border-slate-200 rounded-xl text-sm p-2.5 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium cursor-pointer"
+                          >
+                              <option value="all">Tüm Testler ({editingTests.length})</option>
+                              {TEST_CATEGORIES.map(c => (
+                                  <option key={c} value={c}>{c} ({editingTests.filter(t => testCategory(t) === c).length})</option>
+                              ))}
+                          </select>
+                      </div>
+
+                      {/* Mod seçici */}
+                      <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
+                          <button
+                              type="button"
+                              onClick={() => setBulkMode('percent')}
+                              className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${bulkMode === 'percent' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+                          >
+                              % Yüzde Değişim
+                          </button>
+                          <button
+                              type="button"
+                              onClick={() => setBulkMode('fixed')}
+                              className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${bulkMode === 'fixed' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
+                          >
+                              ₺ Sabit Fiyat
+                          </button>
+                      </div>
+
+                      {/* Değer girişi */}
+                      {bulkMode === 'percent' ? (
+                          <div>
+                              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Değişim Oranı (%)</label>
+                              <div className="relative">
+                                  <input
+                                      type="number"
+                                      value={bulkPercent}
+                                      onChange={e => setBulkPercent(e.target.value)}
+                                      className="w-full border border-slate-200 rounded-xl text-sm p-2.5 pr-10 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium"
+                                      placeholder="10"
+                                      step="any"
+                                  />
+                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">%</span>
+                              </div>
+                              <div className="flex gap-1.5 mt-2">
+                                  {[-20, -10, 10, 20, 50].map(v => (
+                                      <button
+                                          key={v}
+                                          type="button"
+                                          onClick={() => setBulkPercent(String(v))}
+                                          className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg border transition-all ${bulkPercent === String(v) ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+                                      >
+                                          {v > 0 ? `+${v}%` : `${v}%`}
+                                      </button>
+                                  ))}
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1.5">Pozitif artırır, negatif azaltır</p>
+                          </div>
+                      ) : (
+                          <div>
+                              <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Yeni Fiyat (₺)</label>
+                              <div className="relative">
+                                  <input
+                                      type="number"
+                                      min={0}
+                                      value={bulkFixed}
+                                      onChange={e => setBulkFixed(e.target.value)}
+                                      className="w-full border border-slate-200 rounded-xl text-sm p-2.5 pr-10 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 font-medium"
+                                      placeholder="250"
+                                  />
+                                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₺</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 mt-1.5">Seçili kapsamdaki tüm testlere aynı fiyat uygulanır</p>
+                          </div>
+                      )}
+
+                      {/* Önizleme */}
+                      {bulkPreview && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5">
+                              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-wide mb-1.5">Önizleme</p>
+                              <div className="flex items-center gap-2 text-sm">
+                                  <span className="text-slate-500 line-through">{bulkPreview.current.toLocaleString('tr-TR')} ₺</span>
+                                  <span className="text-slate-400">→</span>
+                                  <span className="font-black text-emerald-700">{bulkPreview.next.toLocaleString('tr-TR')} ₺</span>
+                              </div>
+                              <p className="text-[10px] text-slate-500 mt-1">
+                                  {bulkAffectedCount} test etkilenecek
+                                  {bulkScope !== 'all' && ` (${bulkScope})`}
+                              </p>
+                          </div>
+                      )}
+                  </div>
+
+                  <div className="p-5 pt-0 flex gap-3">
+                      <button
+                          onClick={() => setShowBulkPriceModal(false)}
+                          className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-sm transition-all"
+                      >
+                          İptal
+                      </button>
+                      <button
+                          onClick={applyBulkPrice}
+                          disabled={bulkMode === 'percent' ? !bulkPercent || parseFloat(bulkPercent) === 0 : !bulkFixed || parseFloat(bulkFixed) <= 0}
+                          className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-emerald-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                          <DollarSign size={15}/> Uygula
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* --- NEW TEST MODAL --- */}
       {newTestModal && (
