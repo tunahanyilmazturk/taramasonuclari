@@ -3,7 +3,8 @@ import { TestDefinition, PatientRecord, ResultStatus, ExtractedResult, Extractio
 import { flattenTests, includesTr, normalizeTr } from "../utils/lab";
 import { aiConfigService } from "./aiConfigService";
 import { analyzeMedicalTextLocal, generateMedicalSummaryLocal } from "./localAiService";
-import { analyzeMedicalTextOpenRouter, generateMedicalSummaryOpenRouter, testOpenRouterConnection } from "./openrouterService";
+import { analyzeMedicalTextOpenRouter, analyzeMedicalTextBatchOpenRouter, generateMedicalSummaryOpenRouter, testOpenRouterConnection } from "./openrouterService";
+import type { BatchPdfAnalysis, BatchPdfDocument } from "./openrouterService";
 
 // @google/genai büyük bir SDK — ilk AI çağrısında lazy-load edilir
 const getAiClient = async (): Promise<GoogleGenAI> => {
@@ -528,6 +529,42 @@ export const analyzeMedicalText = async (
     return analyzeMedicalTextOpenRouter(text, tests, retries);
   }
   return analyzeMedicalTextGemini(text, tests, retries);
+};
+
+const analyzeMedicalTextBatchGemini = async (documents: BatchPdfDocument[], tests: TestDefinition[], retries = 5): Promise<BatchPdfAnalysis[]> => {
+  const ai = await getAiClient();
+  const { Type } = await import('@google/genai');
+  const flatTests = flattenTests(tests);
+  const targetTests = flatTests.map(t => `- "${t.name}" (key: ${t.key}, unit: ${t.unit || '-'})`).join('\n');
+  const input = documents.map(doc => `### DOCUMENT ${doc.id}\nFILE: ${doc.fileName}\n${filterRelevantContext(doc.text, tests)}`).join('\n\n');
+  const system = 'You are a medical laboratory PDF extraction AI. Analyze every document independently and never mix patients. Extract only requested tests. The patient result comes before units/reference ranges; do not return reference ranges. Correct OCR spacing and comma decimals. Preserve documentId exactly.';
+  const prompt = `${system}\n\nTARGET TESTS:\n${targetTests}\n\nINPUT DOCUMENTS:\n${input}\n\nReturn JSON with a documents array. Each item must contain documentId, fileName, patientName, registrationNumber, jobTitle, date and extractedResults.`;
+  const responseSchema = { type: Type.OBJECT, properties: { documents: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { documentId: { type: Type.STRING }, fileName: { type: Type.STRING }, patientName: { type: Type.STRING }, registrationNumber: { type: Type.STRING }, jobTitle: { type: Type.STRING }, date: { type: Type.STRING }, extractedResults: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { testName: { type: Type.STRING }, value: { type: Type.STRING }, unit: { type: Type.STRING } }, required: ['testName', 'value'] } } }, required: ['documentId', 'fileName', 'patientName', 'registrationNumber', 'jobTitle', 'date', 'extractedResults'] } } } };
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({ model: aiConfigService.getModel('extraction'), contents: prompt, config: { systemInstruction: system, responseMimeType: 'application/json', responseSchema, temperature: 0.1 } });
+      if (!response.text) throw new Error('AI boş yanıt döndürdü');
+      const parsed = JSON.parse(response.text) as { documents?: Array<Record<string, unknown>> };
+      return documents.map(doc => {
+        const item = parsed.documents?.find(value => value.documentId === doc.id) || {};
+        const rawResults = Array.isArray(item.extractedResults) ? item.extractedResults as ExtractedResult[] : [];
+        const normalized = rawResults.map(res => { const def = flatTests.find(t => t.name === res.testName) || flatTests.find(t => normalizeTr(String(res.testName)).includes(normalizeTr(t.name))); let value: number | string = typeof res.value === 'string' ? res.value.trim().replace(/^(-?\d+),(\d+)$/, '$1.$2') : res.value; if (def?.type === 'numeric' && value !== '' && !Number.isNaN(Number(value))) value = Number(value); return { ...res, testName: def?.name || String(res.testName), value }; });
+        const foundTests = normalized.map(res => res.testName);
+        return { documentId: doc.id, fileName: doc.fileName, report: { patientName: String(item.patientName || ''), registrationNumber: String(item.registrationNumber || ''), jobTitle: String(item.jobTitle || ''), date: String(item.date || ''), extractedResults: normalized, foundTests, missingTests: flatTests.filter(t => !foundTests.includes(t.name)).map(t => t.name), totalTests: flatTests.length, foundCount: normalized.length } };
+      });
+    } catch (error) {
+      if (attempt === retries) throw error;
+      await delay(isRateLimitError(error) ? extractRetryDelay(error) : 1000 * Math.pow(2, attempt - 1));
+    }
+  }
+  throw new Error('Gemini batch AI servisi kullanılamıyor');
+};
+
+export const analyzeMedicalTextBatch = async (documents: BatchPdfDocument[], tests: TestDefinition[], retries = 5, forceLocal = false): Promise<BatchPdfAnalysis[]> => {
+  const provider = aiConfigService.getProvider();
+  if (provider === 'local' || forceLocal) return documents.map(doc => ({ documentId: doc.id, fileName: doc.fileName, report: analyzeMedicalTextLocal(doc.text, tests) }));
+  if (provider === 'openrouter') return analyzeMedicalTextBatchOpenRouter(documents, tests, retries);
+  return analyzeMedicalTextBatchGemini(documents, tests, retries);
 };
 
 export const generateMedicalSummary = async (record: PatientRecord): Promise<string> => {

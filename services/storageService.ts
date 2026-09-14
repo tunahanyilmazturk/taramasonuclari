@@ -22,6 +22,17 @@ const KEYS = {
   ROLES: 'mediscan_roles'
 };
 
+const readJson = <T>(key: string, fallback: T): T => {
+  const data = localStorage.getItem(key);
+  if (!data) return fallback;
+  try {
+    return JSON.parse(data) as T;
+  } catch {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+};
+
 export const DEFAULT_REPORT_SETTINGS: ReportSettings = {
   title: 'SAĞLIK TARAMASI RAPORU',
   doctorName: '',
@@ -151,24 +162,21 @@ export const storageService = {
     localStorage.setItem(KEYS.TESTS, JSON.stringify(tests));
   },
   getTests: (): TestDefinition[] => {
-    const data = localStorage.getItem(KEYS.TESTS);
-    return data ? JSON.parse(data) : DEFAULT_TESTS;
+    return readJson(KEYS.TESTS, DEFAULT_TESTS);
   },
 
   saveCompanies: (companies: Company[]) => {
     localStorage.setItem(KEYS.COMPANIES, JSON.stringify(companies));
   },
   getCompanies: (): Company[] => {
-    const data = localStorage.getItem(KEYS.COMPANIES);
-    return data ? JSON.parse(data) : [];
+    return readJson<Company[]>(KEYS.COMPANIES, []);
   },
 
   saveRecords: (records: PatientRecord[]) => {
     localStorage.setItem(KEYS.RECORDS, JSON.stringify(records));
   },
   getRecords: (): PatientRecord[] => {
-    const data = localStorage.getItem(KEYS.RECORDS);
-    return data ? JSON.parse(data) : [];
+    return readJson<PatientRecord[]>(KEYS.RECORDS, []);
   },
 
   // --- GLOBAL RAPOR AYARLARI (tüm firmalar için ortak antet/imza) ---
@@ -176,8 +184,7 @@ export const storageService = {
     localStorage.setItem(KEYS.REPORT_SETTINGS, JSON.stringify(settings));
   },
   getReportSettings: (): ReportSettings => {
-    const data = localStorage.getItem(KEYS.REPORT_SETTINGS);
-    return data ? { ...DEFAULT_REPORT_SETTINGS, ...JSON.parse(data) } : { ...DEFAULT_REPORT_SETTINGS };
+    return { ...DEFAULT_REPORT_SETTINGS, ...readJson<Partial<ReportSettings>>(KEYS.REPORT_SETTINGS, {}) };
   },
 
   // --- KURUM BİLGİLERİ (uygulamayı kullanan OSGB'nin antet/kimlik bilgileri) ---
@@ -185,8 +192,7 @@ export const storageService = {
     localStorage.setItem(KEYS.ORG_INFO, JSON.stringify(info));
   },
   getOrgInfo: (): OrgInfo => {
-    const data = localStorage.getItem(KEYS.ORG_INFO);
-    return data ? { ...DEFAULT_ORG_INFO, ...JSON.parse(data) } : { ...DEFAULT_ORG_INFO };
+    return { ...DEFAULT_ORG_INFO, ...readJson<Partial<OrgInfo>>(KEYS.ORG_INFO, {}) };
   },
 
   // --- GÖRÜNÜM AYARLARI ---
@@ -194,21 +200,18 @@ export const storageService = {
     localStorage.setItem(KEYS.APPEARANCE, JSON.stringify(a));
   },
   getAppearance: (): AppearanceSettings => {
-    const data = localStorage.getItem(KEYS.APPEARANCE);
-    return data ? { ...DEFAULT_APPEARANCE, ...JSON.parse(data) } : { ...DEFAULT_APPEARANCE };
+    return { ...DEFAULT_APPEARANCE, ...readJson<Partial<AppearanceSettings>>(KEYS.APPEARANCE, {}) };
   },
 
   // --- MOBİL TARAMA MODÜLLERİ ---
   saveScreenings: (items: Screening[]) => localStorage.setItem(KEYS.SCREENINGS, JSON.stringify(items)),
   getScreenings: (): Screening[] => {
-    const data = localStorage.getItem(KEYS.SCREENINGS);
-    return data ? JSON.parse(data) : [];
+    return readJson<Screening[]>(KEYS.SCREENINGS, []);
   },
 
   saveQuotes: (items: Quote[]) => localStorage.setItem(KEYS.QUOTES, JSON.stringify(items)),
   getQuotes: (): Quote[] => {
-    const data = localStorage.getItem(KEYS.QUOTES);
-    return data ? JSON.parse(data) : [];
+    return readJson<Quote[]>(KEYS.QUOTES, []);
   },
 
   // --- FORM TASLAKLARI (sayfa yenilense bile sihirbaz/form içeriği korunur) ---
@@ -228,20 +231,17 @@ export const storageService = {
 
   saveEvents: (items: CalendarEvent[]) => localStorage.setItem(KEYS.EVENTS, JSON.stringify(items)),
   getEvents: (): CalendarEvent[] => {
-    const data = localStorage.getItem(KEYS.EVENTS);
-    return data ? JSON.parse(data) : [];
+    return readJson<CalendarEvent[]>(KEYS.EVENTS, []);
   },
 
   saveEquipment: (items: Equipment[]) => localStorage.setItem(KEYS.EQUIPMENT, JSON.stringify(items)),
   getEquipment: (): Equipment[] => {
-    const data = localStorage.getItem(KEYS.EQUIPMENT);
-    return data ? JSON.parse(data) : [];
+    return readJson<Equipment[]>(KEYS.EQUIPMENT, []);
   },
 
   saveTeam: (items: TeamMember[]) => localStorage.setItem(KEYS.TEAM, JSON.stringify(items)),
   getTeam: (): TeamMember[] => {
-    const data = localStorage.getItem(KEYS.TEAM);
-    return data ? JSON.parse(data) : [];
+    return readJson<TeamMember[]>(KEYS.TEAM, []);
   },
 
   // --- USER AUTH METHODS ---
@@ -253,7 +253,9 @@ export const storageService = {
       return DEMO_ACCOUNTS;
     }
     try {
-      const parsed: User[] = JSON.parse(data);
+      const parsedValue: unknown = JSON.parse(data);
+      if (!Array.isArray(parsedValue)) throw new Error('Kullanıcı verisi dizi değil');
+      const parsed = parsedValue as User[];
       // Ensure all demo accounts exist so demo buttons always succeed
       let updated = false;
       DEMO_ACCOUNTS.forEach(demoAcc => {
@@ -284,7 +286,9 @@ export const storageService = {
       return DEFAULT_ROLES;
     }
     try {
-      const parsed = JSON.parse(data) as Role[];
+      const parsedValue: unknown = JSON.parse(data);
+      if (!Array.isArray(parsedValue)) throw new Error('Rol verisi dizi değil');
+      const parsed = parsedValue as Role[];
       // Sistem rolleri (role_doktor, role_personel) her zaman mevcut olmalı — silinmişse geri ekle
       const missing = DEFAULT_ROLES.filter(r => r.isSystem && !parsed.some(p => p.id === r.id));
       if (missing.length > 0) {
@@ -311,8 +315,7 @@ export const storageService = {
     localStorage.removeItem(KEYS.CURRENT_USER);
   },
   getCurrentUser: (): User | null => {
-    const data = localStorage.getItem(KEYS.CURRENT_USER);
-    return data ? JSON.parse(data) : null;
+    return readJson<User | null>(KEYS.CURRENT_USER, null);
   },
 
   // --- AUDIT LOGGING ---
@@ -335,8 +338,7 @@ export const storageService = {
   },
 
   getLogs: (): AuditLog[] => {
-    const data = localStorage.getItem(KEYS.LOGS);
-    return data ? JSON.parse(data) : [];
+    return readJson<AuditLog[]>(KEYS.LOGS, []);
   },
   
   clearLogs: () => {

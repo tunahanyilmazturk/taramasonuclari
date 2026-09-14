@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Activity, LayoutDashboard, Building2, Menu, ChevronLeft, ChevronRight, ChevronDown, LogOut, FlaskConical, Settings as SettingsIcon, Search, Bell, FileText, UserCheck, Stethoscope, CalendarDays, Package, HardHat, Home, Sun, Moon, type LucideIcon } from 'lucide-react';
-import { User, Company, PatientRecord, AppearanceSettings } from '../types';
+import { User, Company, PatientRecord, AppearanceSettings, ModulePermissions } from '../types';
+import { canAccessModule, routeModule } from '../utils/permissions';
 import { storageService } from '../services/storageService';
 import { updateAppearance } from '../services/appearance';
 
@@ -28,6 +29,7 @@ interface LayoutProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   currentUser: User;
+  permissions: ModulePermissions;
   onLogout: () => void;
   stats?: SidebarStats;
   companies?: Company[];
@@ -53,7 +55,7 @@ const PAGE_META: Record<string, { title: string; group: string }> = {
     settings: { title: 'Ayarlar', group: 'Sistem' }
 };
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, currentUser, onLogout, stats, companies = [], records = [] }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, currentUser, permissions, onLogout, stats, companies = [], records = [] }) => {
   const [isMobileOpen, setMobileOpen] = useState(false);
   const [isDesktopCollapsed, setDesktopCollapsed] = useState(() => storageService.getAppearance().sidebarCollapsed);
   const [edgeTooltip, setEdgeTooltip] = useState<{ label: string; badge?: number; top: number } | null>(null);
@@ -160,6 +162,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     }
   ];
 
+  const visibleNavGroups = navGroups
+    .map(group => ({ ...group, items: group.items.filter(item => {
+      const module = routeModule(item.id);
+      return !module || canAccessModule(permissions, module);
+    }) }))
+    .filter(group => group.items.length > 0);
+
   const renderNavLink = (item: NavItem) => {
     const isActive = activeTab === item.id;
     return (
@@ -257,7 +266,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
 
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto overflow-x-hidden custom-scrollbar">
-          {navGroups.map((group) => (
+          {visibleNavGroups.map((group) => (
             <div key={group.label}>
               {!isDesktopCollapsed && (
                 <p className="px-3.5 mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">

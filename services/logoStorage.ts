@@ -72,6 +72,18 @@ export const deleteImage = async (key: string): Promise<void> => {
   }
 };
 
+export const clearImages = async (): Promise<void> => {
+  try {
+    const db = await openDb();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  } catch { /* IndexedDB kullanılamıyorsa reset devam eder */ }
+};
+
 /** Görseli dosyadan okuyup yeniden boyutlandırarak kaydeder (maks boyut kısıtlı) */
 export const saveResizedImage = async (key: string, file: File, maxSize = 400): Promise<void> => {
   const blob = await resizeToBlob(file, maxSize);

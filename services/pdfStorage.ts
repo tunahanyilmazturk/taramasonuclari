@@ -65,6 +65,18 @@ export const deletePdf = async (recordId: string): Promise<void> => {
   }
 };
 
+export const clearPdfs = async (): Promise<void> => {
+  try {
+    const db = await openDb();
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    });
+  } catch { /* IndexedDB kullanılamıyorsa reset devam eder */ }
+};
+
 /** PDF'i yeni sekmede açar — Blob URL oluşturup window.open yapar */
 export const openPdfInNewTab = async (recordId: string, fileName?: string): Promise<boolean> => {
   const blob = await getPdf(recordId);

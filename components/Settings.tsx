@@ -13,7 +13,7 @@ import { updateAppearance } from '../services/appearance';
 import { hashPassword } from '../utils/security';
 import { AiSettings } from './AiSettings';
 import { UserManager } from './UserManager';
-import { resizeToBlob, getImageUrl, deleteImage } from '../services/logoStorage';
+import { resizeToBlob, getImageUrl, deleteImage, saveImage } from '../services/logoStorage';
 
 interface SettingsProps {
   fullState: AppState;
@@ -47,10 +47,18 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
   const [resetConfirmationText, setResetConfirmationText] = useState('');
   // Sekme URL'den kontrol edilir (initialTab) — yoksa iç state'e düşer
   const [internalTab, setInternalTab] = useState<SettingsTab>(initialTab ?? 'system');
-  const activeTab = initialTab ?? internalTab;
 
   // Auth & Logs
   const [currentUser, setCurrentUser] = useState<User | null>(storageService.getCurrentUser());
+  const isAdmin = currentUser?.role === 'super_admin';
+  const allowedTabs = useMemo<SettingsTab[]>(
+    () => isAdmin
+      ? ['profile', 'system', 'org', 'appearance', 'ai', 'users', 'security', 'logs']
+      : ['profile', 'appearance', 'security'],
+    [isAdmin],
+  );
+  const requestedTab = initialTab ?? internalTab;
+  const activeTab = allowedTabs.includes(requestedTab) ? requestedTab : 'profile';
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => (initialTab === 'logs' ? storageService.getLogs() : []));
   const [logSearch, setLogSearch] = useState('');
   const [logCategoryFilter, setLogCategoryFilter] = useState<string>('all');
@@ -66,7 +74,12 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
     phone: currentUser?.phone || '',
     jobTitle: currentUser?.jobTitle || ''
   });
-  // currentUser değişince profileForm senkronize et
+  useEffect(() => {
+    if (!allowedTabs.includes(requestedTab)) {
+      onNavigate?.('settings/profile');
+    }
+  }, [allowedTabs, onNavigate, requestedTab]);
+
   useEffect(() => {
     if (currentUser) {
       const sync = () => {
@@ -97,22 +110,23 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
   // Logo ve imza görüntülerini yükle
   React.useEffect(() => {
     let cancelled = false;
+    const urls: string[] = [];
     const loadImages = async () => {
       if (orgForm.logoKey) {
         const url = await getImageUrl(orgForm.logoKey);
-        if (!cancelled && url) setLogoUrl(url);
+        if (!cancelled && url) { urls.push(url); setLogoUrl(url); }
       } else if (!cancelled) {
         setLogoUrl(null);
       }
       if (orgForm.signatureKey) {
         const url = await getImageUrl(orgForm.signatureKey);
-        if (!cancelled && url) setSignatureUrl(url);
+        if (!cancelled && url) { urls.push(url); setSignatureUrl(url); }
       } else if (!cancelled) {
         setSignatureUrl(null);
       }
     };
     loadImages();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; urls.forEach(url => URL.revokeObjectURL(url)); };
   }, [orgForm.logoKey, orgForm.signatureKey]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,10 +140,8 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
       if (!blob) throw new Error('Boyutlandırma başarısız');
       const key = 'org_logo';
       await deleteImage(key); // eskisini sil
-      const { saveImage } = await import('../services/logoStorage');
       await saveImage(key, blob);
       setOrgForm(p => ({ ...p, logoKey: key }));
-      setLogoUrl(URL.createObjectURL(blob)); // anında önizleme — effect tetiklenmese bile
       addNotification('success', 'Logo yüklendi. Kaydet butonuna basın.');
     } catch (err) {
       console.error(err);
@@ -151,10 +163,8 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
       if (!blob) throw new Error('Boyutlandırma başarısız');
       const key = 'org_signature';
       await deleteImage(key);
-      const { saveImage } = await import('../services/logoStorage');
       await saveImage(key, blob);
       setOrgForm(p => ({ ...p, signatureKey: key }));
-      setSignatureUrl(URL.createObjectURL(blob)); // anında önizleme
       addNotification('success', 'İmza yüklendi. Kaydet butonuna basın.');
     } catch (err) {
       console.error(err);
@@ -379,13 +389,25 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
           <p className="text-slate-500 mt-2 text-base ml-16">
             Veri yönetimi, AI yapılandırması, güvenlik ve sistem günlükleri.
           </p>
+          <div className="mt-5 ml-16 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-emerald-700">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Yerel kayıt aktif
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-blue-700">
+              <ShieldCheck size={11} /> Oturum güvenli
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-slate-600">
+              {appearance.theme === 'dark' ? <Moon size={11} /> : <Sun size={11} />}
+              {appearance.theme === 'dark' ? 'Koyu tema' : 'Açık tema'}
+            </span>
+          </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 items-start">
       {/* SIDEBAR — bölüm menüsü */}
       <aside className="w-full lg:w-60 shrink-0">
         <div className="bg-white border border-slate-200 rounded-2xl p-2 lg:sticky lg:top-20 flex lg:flex-col gap-1 overflow-x-auto">
-          {[
+              {[
               { id: 'profile', icon: UserCircle, label: 'Profilim', desc: 'Kişisel bilgiler' },
               { id: 'system', icon: HardDrive, label: 'Sistem & Veri', desc: 'Depolama, yedek, rapor', adminOnly: true },
               { id: 'org', icon: Building2, label: 'Kurum Bilgileri', desc: 'Antet, iletişim, imza', adminOnly: true },
@@ -394,7 +416,7 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
               { id: 'users', icon: Users, label: 'Kullanıcılar', desc: 'Hesap & rol yönetimi', adminOnly: true },
               { id: 'security', icon: ShieldCheck, label: 'Güvenlik', desc: 'Şifre, oturum' },
               { id: 'logs', icon: History, label: 'İşlem Kayıtları', desc: 'Audit log', adminOnly: true }
-          ].map(tab => {
+              ].filter(tab => !tab.adminOnly || isAdmin).map(tab => {
               if (tab.adminOnly && currentUser?.role !== 'super_admin') return null;
               const isActive = activeTab === tab.id;
               return (
@@ -1146,30 +1168,6 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
           {/* --- LOGS TAB --- */}
           {activeTab === 'logs' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-
-                  {/* İstatistik şeridi */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {[
-                      { label: 'Toplam', value: auditLogs.length, color: 'blue', icon: Activity },
-                      { label: 'Bugün', value: auditLogs.filter(l => { const d = new Date(l.timestamp); const n = new Date(); return d.toDateString() === n.toDateString(); }).length, color: 'emerald', icon: Activity },
-                      { label: 'Kritik', value: auditLogs.filter(l => l.severity === 'danger' || l.severity === 'warning').length, color: 'amber', icon: AlertTriangle },
-                      { label: 'Silinen', value: auditLogs.filter(l => l.action.includes('DELETE') || l.action.includes('CLEAR') || l.action.includes('RESET')).length, color: 'red', icon: Trash2 }
-                    ].map(s => {
-                      const Icon = s.icon;
-                      const colorMap: Record<string, string> = {
-                        blue: 'bg-blue-50 text-blue-600',
-                        emerald: 'bg-emerald-50 text-emerald-600',
-                        amber: 'bg-amber-50 text-amber-600',
-                        red: 'bg-red-50 text-red-600'
-                      };
-                      return (
-                        <div key={s.label} className="bg-white rounded-2xl border border-slate-200 p-3 flex items-center gap-2.5">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${colorMap[s.color]}`}><Icon size={16} /></div>
-                          <div><p className="text-lg font-black text-slate-800 tabular-nums leading-none">{s.value}</p><p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">{s.label}</p></div>
-                        </div>
-                      );
-                    })}
-                  </div>
 
                   {/* Filtre toolbar */}
                   <div className="bg-white rounded-2xl border border-slate-200 p-3 space-y-3">

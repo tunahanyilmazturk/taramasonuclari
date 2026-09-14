@@ -12,7 +12,7 @@ Mobil sağlık taraması operasyonlarını **tekliften rapora** yöneten istemci
    ```
    npm install
    ```
-2. `.env.example` dosyasını `.env.local` olarak kopyalayıp `GEMINI_API_KEY` değerini girin
+2. `.env.example` dosyasını `.env.local` olarak kopyalayıp kullanacağınız sağlayıcının (`GEMINI_API_KEY` veya `OPENROUTER_API_KEY`) değerini girin
    ([ücretsiz anahtar](https://aistudio.google.com/apikey))
 3. Geliştirme sunucusunu başlatın:
    ```
@@ -41,8 +41,8 @@ Giriş ekranından "Örnek Firma & Tarama Verilerini Yükle" ile demo verisi olu
 
 ## Teknolojiler
 
-- React 19 + TypeScript 7 + Vite 8
+- React 19 + TypeScript 6 + Vite 8
 - `@google/genai` (Gemini) — PDF metni → yapılandırılmış sonuç
 - PDF.js (CDN) — PDF metin çıkarımı
 - ExcelJS (CDN) — stillendirilmiş Excel raporu
-- Tailwind CSS (CDN) + lucide-react
+- Tailwind CSS (Vite plugin) + lucide-react

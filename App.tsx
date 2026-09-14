@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { HomeDashboard } from './components/HomeDashboard';
@@ -17,7 +17,9 @@ import { storageService } from './services/storageService';
 import { useHashRoute, resolveRoute } from './utils/router';
 import { DEFAULT_TESTS } from './constants';
 import { generateDemoData } from './services/demoDataService';
-import { deletePdf as deletePdfBlob } from './services/pdfStorage';
+import { deletePdf as deletePdfBlob, clearPdfs } from './services/pdfStorage';
+import { clearImages } from './services/logoStorage';
+import { canAccessModule, canEditModule, getUserPermissions, routeModule } from './utils/permissions';
 import { X, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 
 // Auto-Logout Time in Milliseconds (10 Minutes)
@@ -29,7 +31,12 @@ function App() {
 
   // URL tabanlı sayfa yönetimi (#/dashboard, #/companies, ...)
   const { hash, navigate, goBack } = useHashRoute();
-  const activeTab = resolveRoute(hash, currentUser?.role === 'super_admin');
+  const resolvedTab = resolveRoute(hash, currentUser?.role === 'super_admin');
+  const permissions = currentUser ? getUserPermissions(currentUser, storageService.getRoles()) : undefined;
+  const resolvedModule = routeModule(resolvedTab);
+  const activeTab = currentUser && permissions && resolvedModule && !canAccessModule(permissions, resolvedModule)
+    ? 'home'
+    : resolvedTab;
 
   // Ayarlar alt sekmesi — #/settings/<tab> veya eski #/users, #/ai deep-link'leri
   const settingsSub = hash.split('/')[1];
@@ -127,8 +134,7 @@ function App() {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
 
       logoutTimerRef.current = setTimeout(() => {
-          if (currentUser) storageService.addLog(currentUser, 'AUTO_LOGOUT', 'İnaktiflik nedeniyle otomatik çıkış.', { category: 'auth', severity: 'warning' });
-          handleLogout();
+           handleLogout();
           addNotification('info', 'Güvenlik gereği, uzun süre işlem yapmadığınız için oturumunuz kapatıldı.');
       }, AUTO_LOGOUT_TIME);
   }, [currentUser, handleLogout]);
@@ -239,10 +245,11 @@ function App() {
       }
   };
 
-  const handleResetState = () => {
+  const handleResetState = async () => {
       setMasterTests(DEFAULT_TESTS);
       setCompanies([]);
       setRecords([]);
+      await Promise.all([clearPdfs(), clearImages()]);
       localStorage.clear();
       window.location.reload(); 
   };
@@ -283,6 +290,7 @@ function App() {
       activeTab={activeTab} 
       onTabChange={navigate}
       currentUser={currentUser}
+      permissions={permissions!}
       onLogout={handleLogout}
       stats={{ records: records.length, companies: companies.length, tests: masterTests.length, users: storageService.getUsers().length }}
       companies={companies}
@@ -329,6 +337,7 @@ function App() {
           companies={companies}
           records={records}
           currentUser={currentUser}
+          permissions={permissions!}
           onNavigate={navigate}
           onLoadDemo={handleLoadDemoData}
         />
@@ -370,8 +379,8 @@ function App() {
         />
       )}
       {activeTab === 'calendar' && <Calendar companies={companies} onGoToDashboard={() => navigate('dashboard')} onNavigate={navigate} />}
-      {activeTab === 'equipment' && <Equipment onGoToDashboard={() => navigate('dashboard')} />}
-      {activeTab === 'team' && <Team onGoToDashboard={() => navigate('dashboard')} />}
+      {activeTab === 'equipment' && <Equipment onGoToDashboard={() => navigate('dashboard')} canEdit={canEditModule(permissions!, 'equipment')} />}
+      {activeTab === 'team' && <Team onGoToDashboard={() => navigate('dashboard')} canEdit={canEditModule(permissions!, 'team')} />}
 
       {activeTab === 'companies' && (
         <CompanyManager 

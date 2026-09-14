@@ -1,5 +1,3 @@
-import pdfMake from 'pdfmake/build/pdfmake';
-import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Company, OrgInfo, Quote, QuoteStatus, QuoteType } from '../types';
 import { storageService } from './storageService';
@@ -12,10 +10,19 @@ import { getImage } from './logoStorage';
  * metin seçilebilir gerçek PDF üretir (ekran görüntüsü değil).
  */
 
-// vfs_fonts modülünün dışa aktarım şekli sürüme göre değişebiliyor — ikisini de dene
-const vfs = (pdfFonts as { pdfMake?: { vfs: unknown }; vfs?: unknown }).pdfMake?.vfs
-  ?? (pdfFonts as { vfs?: unknown }).vfs;
-if (vfs) (pdfMake as { vfs?: unknown }).vfs = vfs;
+// PDF motoru yalnızca kullanıcı PDF istediğinde yüklenir.
+export const getPdfMake = async () => {
+  const [{ default: pdfMake }, pdfFonts] = await Promise.all([
+    import('pdfmake/build/pdfmake.js'),
+    import('pdfmake/build/vfs_fonts.js')
+  ]);
+  const fontModule = (pdfFonts as { default?: unknown }).default ?? pdfFonts;
+  const vfs = (fontModule as { pdfMake?: { vfs: unknown }; vfs?: unknown }).pdfMake?.vfs
+    ?? (fontModule as { vfs?: unknown }).vfs
+    ?? fontModule;
+  if (vfs) (pdfMake as { vfs?: unknown }).vfs = vfs;
+  return pdfMake;
+};
 
 // ── Yardımcılar ──
 
@@ -583,11 +590,13 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
 
 /** PDF'i dosya olarak indirir */
 export const downloadQuotePdf = async (quote: Quote, company?: Company) => {
+  const pdfMake = await getPdfMake();
   const filename = `${quote.quoteNumber}${company ? `-${slugify(company.name)}` : ''}.pdf`;
   pdfMake.createPdf(await buildQuoteDoc(quote, company)).download(filename);
 };
 
 /** PDF'i yeni tarayıcı sekmesinde önizleme olarak açar */
 export const previewQuotePdf = async (quote: Quote, company?: Company) => {
+  const pdfMake = await getPdfMake();
   pdfMake.createPdf(await buildQuoteDoc(quote, company)).open();
 };

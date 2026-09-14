@@ -18,9 +18,8 @@ beforeEach(() => {
 
 describe('pdfmake + Türkçe font', () => {
   it('Türkçe karakterli gerçek PDF buffer üretir', async () => {
-    // Servis importu vfs'i kaydeder
-    await import('./quotePdfService');
-    const pdfMake = (await import('pdfmake/build/pdfmake')).default;
+    const { getPdfMake } = await import('./quotePdfService');
+    const pdfMake = await getPdfMake();
 
     const doc = pdfMake.createPdf({
       content: [{ text: 'Şık Türkçe İçerik — ğüşıöç ĞÜŞİÖÇ İMÅ' }]

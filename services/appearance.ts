@@ -3,7 +3,7 @@ import { storageService } from './storageService';
 
 /**
  * Görünüm uygulama katmanı.
- * Tailwind CDN kullanıldığı için dark: varyantları yerine,
+ * Uygulama genelinde tema sınıfları kullanıldığı için dark: varyantları yerine,
  * <html> üzerindeki sınıflarla tetiklenen global override CSS'i enjekte edilir.
  * Tüm remap kuralları @media screen altında — yazdırma etkilenmez.
  * Vurgu rengi sabit mavidir (Tailwind blue/indigo ailesi).
@@ -311,6 +311,60 @@ const DARK_CSS = `
   html.dark .shadow-indigo-200 { --tw-shadow-color:rgba(99,102,241,.3); }
   /* Slate-50/20 (boş gün hücreleri) */
   html.dark .bg-slate-50\\/20 { background-color:rgba(30,41,59,.2); }
+  /* ── Koyu mod tutarlılık katmanı ── */
+  /* Opaklık varyantları: kartlar, filtreler ve form yüzeyleri */
+  html.dark .bg-slate-50\\/30 { background-color:rgba(30,41,59,.3); }
+  html.dark .bg-slate-50\\/60 { background-color:rgba(30,41,59,.6); }
+  html.dark .bg-slate-50\\/70 { background-color:rgba(30,41,59,.7); }
+  html.dark .bg-slate-50\\/95 { background-color:rgba(15,23,42,.95); }
+  html.dark .bg-slate-100\\/50 { background-color:rgba(38,52,72,.5); }
+  html.dark .bg-slate-100\\/70 { background-color:rgba(38,52,72,.7); }
+  html.dark .bg-slate-100\\/80 { background-color:rgba(38,52,72,.8); }
+  html.dark .bg-slate-200\\/50 { background-color:rgba(51,65,85,.5); }
+  html.dark .bg-slate-200\\/70 { background-color:rgba(51,65,85,.7); }
+  html.dark .bg-slate-800\\/80 { background-color:rgba(22,32,50,.8); }
+  html.dark .bg-slate-900\\/90 { background-color:rgba(10,16,32,.9); }
+  html.dark .bg-slate-950\\/60 { background-color:rgba(2,6,23,.6); }
+  /* Açık moddan kalan beyaz translucent yüzeyler */
+  html.dark .bg-white\\/5 { background-color:rgba(255,255,255,.05); }
+  html.dark .bg-white\\/10 { background-color:rgba(255,255,255,.08); }
+  html.dark .bg-white\\/15 { background-color:rgba(255,255,255,.1); }
+  html.dark .bg-white\\/20 { background-color:rgba(255,255,255,.12); }
+  html.dark .hover\\:bg-white\\/10:hover { background-color:rgba(255,255,255,.12); }
+  html.dark .hover\\:bg-white\\/20:hover { background-color:rgba(255,255,255,.16); }
+  html.dark .border-white\\/15 { border-color:rgba(148,163,184,.2); }
+  html.dark .border-white\\/20 { border-color:rgba(148,163,184,.26); }
+  /* Odak durumunda input'un tekrar beyaza dönmesini engelle */
+  html.dark .focus\\:bg-white:focus { background-color:#0f172a; }
+  html.dark .focus\\:bg-slate-50:focus { background-color:#1e293b; }
+  html.dark .focus\\:bg-slate-100:focus { background-color:#263448; }
+  /* Eksik slate metin/hover tonları */
+  html.dark .text-slate-200 { color:#e2e8f0; }
+  html.dark .text-slate-300 { color:#cbd5e1; }
+  html.dark .hover\\:text-slate-500:hover { color:#cbd5e1; }
+  html.dark .hover\\:text-slate-600:hover { color:#e2e8f0; }
+  html.dark .hover\\:text-slate-700:hover { color:#f1f5f9; }
+  html.dark .hover\\:text-slate-800:hover,
+  html.dark .hover\\:text-slate-900:hover { color:#fff; }
+  /* Daha koyu border seviyeleri; ayırıcı ve alan kenarları artık beyaz kalmaz */
+  html.dark .border-slate-500 { border-color:#64748b; }
+  html.dark .border-slate-600 { border-color:#475569; }
+  html.dark .border-slate-700 { border-color:#334155; }
+  html.dark .border-slate-800 { border-color:#263448; }
+  html.dark .border-slate-200\\/50 { border-color:rgba(51,65,85,.5); }
+  html.dark .border-slate-200\\/80 { border-color:rgba(51,65,85,.8); }
+  html.dark .focus\\:border-slate-400:focus { border-color:#94a3b8; }
+  /* Liste satırı ve filtre hover'ları */
+  html.dark .hover\\:bg-slate-50:hover { background-color:#1e293b; }
+  html.dark .hover\\:bg-slate-50\\/50:hover { background-color:rgba(30,41,59,.6); }
+  html.dark .hover\\:bg-slate-50\\/60:hover { background-color:rgba(30,41,59,.7); }
+  html.dark .hover\\:bg-slate-100:hover { background-color:#263448; }
+  html.dark .hover\\:bg-slate-100\\/60:hover { background-color:rgba(38,52,72,.7); }
+  html.dark .hover\\:bg-slate-200:hover { background-color:#334155; }
+  html.dark .hover\\:bg-slate-200\\/60:hover { background-color:rgba(51,65,85,.7); }
+  html.dark .hover\\:bg-slate-300:hover { background-color:#475569; }
+  html.dark .hover\\:bg-slate-700:hover { background-color:#263448; }
+  html.dark .hover\\:bg-slate-900:hover { background-color:#020617; }
 `;
 
 /** Kompakt yoğunluk — yaygın boşluk ölçülerini küçültür */

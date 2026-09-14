@@ -2,7 +2,8 @@ import React, { useState, useRef, useMemo, useEffect, lazy, Suspense } from 'rea
 import { Company, PatientRecord, ResultStatus, ExtractedResult, TestDefinition } from '../types';
 import { storageService } from '../services/storageService';
 import { extractTextFromPdf } from '../services/pdfService';
-import { analyzeMedicalText } from '../services/geminiService';
+import { analyzeMedicalTextBatch } from '../services/geminiService';
+import type { BatchPdfDocument } from '../services/openrouterService';
 import { aiConfigService } from '../services/aiConfigService';
 import { savePdf as savePdfBlob, openPdfInNewTab } from '../services/pdfStorage';
 import { exportToExcel } from '../services/excelService';
@@ -12,14 +13,13 @@ import {
   calculateStatus, computeRecordValues, findTestById, flattenTests,
   includesTr, isAbnormalStatus, normalizeTr, parseTrDate
 } from '../utils/lab';
-import { StatsCards } from './dashboard/StatsCards';
 import { RecordsTable, EditingCell, SortConfig, FilterType, ReviewFilter } from './dashboard/RecordsTable';
 import { PatientModal } from './dashboard/PatientModal';
 import type { DashboardStats, ChartData, DepartmentStat, TestStat } from './dashboard/dashboardTypes';
 import {
   Building2, Sparkles, RotateCcw, Download, List, BarChart3, Loader2,
   UploadCloud, UserPlus, ArrowRight, ArrowLeft, CheckCircle2, Plus, FlaskConical, Check,
-  FileText, Eye, AlertTriangle, ChevronRight, MapPin, Search, Stethoscope, CalendarDays,
+  FileText, AlertTriangle, ChevronRight, MapPin, Search, Stethoscope, CalendarDays,
   KeyRound, Cpu, X
 } from 'lucide-react';
 
@@ -236,24 +236,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
       }).sort((a, b) => b.lastDate - a.lastDate);
   }, [companies, records]);
 
-  const overviewStats = useMemo(() => {
-      const todayTs = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00').getTime();
-      const weekAgoTs = todayTs - 7 * 24 * 60 * 60 * 1000;
-      const reviewed = records.filter(r => r.isReviewed).length;
-      const anomalies = records.filter(r => Object.values(r.status).some(isAbnormalStatus)).length;
-      return {
-          totalRecords: records.length,
-          pendingReview: records.filter(r => !r.isReviewed).length,
-          reviewed,
-          anomalyRecords: anomalies,
-          activeCompanies: new Set(records.map(r => r.companyId)).size,
-          todayRecords: records.filter(r => parseTrDate(r.date) === todayTs).length,
-          weekRecords: records.filter(r => parseTrDate(r.date) >= weekAgoTs).length,
-          reviewRate: records.length > 0 ? Math.round((reviewed / records.length) * 100) : 0,
-          anomalyRate: records.length > 0 ? Math.round((anomalies / records.length) * 100) : 0
-      };
-  }, [records]);
-
   // ── Genel bakış: arama + durum filtresi ──
   const [overviewSearch, setOverviewSearch] = useState('');
   const [recentFilter, setRecentFilter] = useState<'all' | 'pending' | 'anomaly' | 'reviewed'>('all');
@@ -280,12 +262,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
       .filter(s => s.status !== 'iptal' && s.status !== 'tamamlandi' && s.date >= today)
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 4);
-
-  // Genel inceleme ilerlemesi
-  const reviewProgress = useMemo(() => {
-      if (records.length === 0) return 0;
-      return Math.round((records.filter(r => r.isReviewed).length / records.length) * 100);
-  }, [records]);
 
   const startNewResult = () => {
       setPageMode('workspace');
@@ -687,105 +663,45 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setFileProgress(files.map(f => ({ name: f.name, size: f.size, status: 'pending' as const })));
 
     try {
-      // Paralel işleme — local provider'da 3, API'de 2 worker
-      const CONCURRENCY_LIMIT = forceLocal || provider === 'local' ? 3 : 2;
-      const BATCH_FLUSH_SIZE = 5;
-      const REQUEST_DELAY_MS = forceLocal || provider === 'local' ? 200 : 1500;
-
-      let activeRecordsBuffer: PatientRecord[] = [];
-      let processedCount = 0;
-      let fileIndex = 0;
-
       const updateFileStatus = (idx: number, status: 'pending' | 'processing' | 'done' | 'error', error?: string) => {
         setFileProgress(prev => prev.map((f, i) => i === idx ? { ...f, status, error } : f));
       };
-
-      const processNext = async (): Promise<void> => {
-          while (fileIndex < files.length) {
-            if (cancelProcessing) return;
-
-            const currentIndex = fileIndex++;
-            const file = files[currentIndex];
-
-            setProcessingStatus(prev => ({
-                ...prev,
-                current: Math.min(processedCount + 1, files.length),
-                currentFile: file.name
-            }));
-            updateFileStatus(currentIndex, 'processing');
-
-          try {
-              if (file.type !== 'application/pdf') {
-                  throw new Error("PDF formatında değil");
-              }
-
-              const text = await extractTextFromPdf(file);
-              const analysis = await analyzeMedicalText(text, testsToLookFor, 5, forceLocal);
-
-              const { results, statusMap } = computeRecordValues(testsToLookFor, def => {
-                  const found = analysis.extractedResults.find(r =>
-                      normalizeTr(r.testName) === normalizeTr(def.name) ||
-                      (def.key && normalizeTr(r.testName).includes(def.key))
-                  );
-                  return found?.value;
-              });
-
-              const newRecord: PatientRecord = {
-                  id: Date.now().toString() + Math.random().toString().slice(2, 5),
-                  companyId: selectedCompany.id,
-                  patientName: analysis.patientName || "Bilinmeyen Hasta",
-                  registrationNumber: analysis.registrationNumber || "Belirtilmemiş",
-                  jobTitle: analysis.jobTitle || "Belirtilmemiş",
-                  date: analysis.date || new Date().toISOString().split('T')[0],
-                  fileName: file.name,
-                  results,
-                  status: statusMap,
-                  isReviewed: false
-              };
-
-              activeRecordsBuffer.push(newRecord);
-              updateFileStatus(currentIndex, 'done');
-
-              // PDF'in orijinal dosyasını IndexedDB'ye sakla — sonra açılabilsin
-              savePdfBlob(newRecord.id, file);
-
-          } catch (err: unknown) {
-              const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
-              updateFileStatus(currentIndex, 'error', message);
-              console.error(`Error processing ${file.name}:`, err);
-          } finally {
-              processedCount++;
-              if (activeRecordsBuffer.length >= BATCH_FLUSH_SIZE) {
-                  const recordsToFlush = [...activeRecordsBuffer];
-                  activeRecordsBuffer = [];
-                  if (onAddRecords) {
-                      onAddRecords(recordsToFlush);
-                  } else {
-                      recordsToFlush.forEach(r => onAddRecord(r));
-                  }
-              }
-          }
-          // Rate limit'e takılmamak için istekler arası bekle
-          if (fileIndex < files.length && !cancelProcessing) {
-              await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY_MS));
-          }
-          }
-      };
-
-      const workers = [];
-      for (let i = 0; i < CONCURRENCY_LIMIT; i++) {
-          workers.push(processNext());
+      const documents: BatchPdfDocument[] = [];
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index];
+        setProcessingStatus({ current: index + 1, total: files.length, currentFile: file.name });
+        updateFileStatus(index, 'processing');
+        if (file.type !== 'application/pdf') {
+          updateFileStatus(index, 'error', 'PDF formatında değil');
+          continue;
+        }
+        try {
+          documents.push({ id: `pdf_${index}_${Date.now()}`, fileName: file.name, text: await extractTextFromPdf(file) });
+        } catch (err: unknown) {
+          updateFileStatus(index, 'error', err instanceof Error ? err.message : 'PDF metni okunamadı');
+        }
       }
 
-      await Promise.all(workers);
-
-      if (activeRecordsBuffer.length > 0) {
-          if (onAddRecords) {
-              onAddRecords(activeRecordsBuffer);
-          } else {
-              activeRecordsBuffer.forEach(r => onAddRecord(r));
-          }
-      }
+      if (documents.length === 0 || cancelProcessing) return;
+      // Tüm PDF metinleri tek AI çağrısında analiz edilir; yerel sağlayıcıda yine ücretsiz kural motoru çalışır.
+      const analyses = await analyzeMedicalTextBatch(documents, testsToLookFor, 5, forceLocal);
+      const records: PatientRecord[] = [];
+      analyses.forEach(analysis => {
+        const fileIndex = Number(analysis.documentId.split('_')[1]);
+        const file = files[fileIndex];
+        if (!file) return;
+        const { results, statusMap } = computeRecordValues(testsToLookFor, def => {
+          const found = analysis.report.extractedResults.find(r => normalizeTr(r.testName) === normalizeTr(def.name) || (def.key && normalizeTr(r.testName).includes(def.key)));
+          return found?.value;
+        });
+        const record: PatientRecord = { id: Date.now().toString() + Math.random().toString().slice(2, 5), companyId: selectedCompany.id, patientName: analysis.report.patientName || 'Bilinmeyen Hasta', registrationNumber: analysis.report.registrationNumber || 'Belirtilmemiş', jobTitle: analysis.report.jobTitle || 'Belirtilmemiş', date: analysis.report.date || new Date().toISOString().split('T')[0], fileName: file.name, results, status: statusMap, isReviewed: false };
+        records.push(record);
+        updateFileStatus(fileIndex, 'done');
+        savePdfBlob(record.id, file);
+      });
+      const completedIds = new Set(analyses.map(item => item.documentId));
+      documents.forEach(doc => { const sourceIndex = Number(doc.id.split('_')[1]); if (!completedIds.has(doc.id)) updateFileStatus(sourceIndex, 'error', 'Bu belge için AI sonucu alınamadı'); });
+      if (onAddRecords) onAddRecords(records); else records.forEach(record => onAddRecord(record));
     } catch (err: unknown) {
       console.error("Batch processing error:", err);
       const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
@@ -949,105 +865,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </button>
               );
             })}
-          </div>
-
-          {/* Genel İstatistikler — tıklanabilir filtre kartları */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <button
-              onClick={() => setRecentFilter('all')}
-              className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${recentFilter === 'all' ? 'border-blue-400 ring-2 ring-blue-100 shadow-sm' : 'border-slate-200 hover:border-blue-200'}`}
-            >
-              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><Building2 size={18}/></div>
-              <div><p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.activeCompanies}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Aktif Firma</p></div>
-            </button>
-            <button
-              onClick={() => setRecentFilter('all')}
-              className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${recentFilter === 'all' ? 'border-indigo-400 ring-2 ring-indigo-100 shadow-sm' : 'border-slate-200 hover:border-indigo-200'}`}
-            >
-              <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.totalRecords}</p>
-                  {overviewStats.todayRecords > 0 && <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">+{overviewStats.todayRecords} bugün</span>}
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Toplam Sonuç</p>
-              </div>
-            </button>
-            <button
-              onClick={() => setRecentFilter('pending')}
-              className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${recentFilter === 'pending' ? 'border-amber-400 ring-2 ring-amber-100 shadow-sm' : 'border-slate-200 hover:border-amber-200'}`}
-            >
-              <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0"><Eye size={18}/></div>
-              <div><p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.pendingReview}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bekleyen İnceleme</p></div>
-            </button>
-            <button
-              onClick={() => setRecentFilter('anomaly')}
-              className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${recentFilter === 'anomaly' ? 'border-red-400 ring-2 ring-red-100 shadow-sm' : 'border-slate-200 hover:border-red-200'}`}
-            >
-              <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18}/></div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xl font-black text-slate-800 tabular-nums">{overviewStats.anomalyRecords}</p>
-                  {overviewStats.anomalyRate > 0 && <span className="text-[9px] font-bold text-red-500">%{overviewStats.anomalyRate}</span>}
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bulgulu Kayıt</p>
-              </div>
-            </button>
-          </div>
-
-          {/* Bugün özeti + Bu hafta + İnceleme ilerlemesi — yan yana */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            {/* Bugün özeti */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-2xl border border-blue-100 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <CalendarDays size={15} className="text-blue-600" />
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Bugün</h3>
-                <span className="text-[10px] text-slate-400 ml-auto">{new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-2xl font-black text-blue-700 tabular-nums">{overviewStats.todayRecords}</p>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase">Yeni Kayıt</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-black text-emerald-700 tabular-nums">{upcomingScreenings.filter(s => s.date === today).length}</p>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase">Tarama Bugün</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bu hafta */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <BarChart3 size={15} className="text-slate-500" />
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">Bu Hafta</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-2xl font-black text-slate-800 tabular-nums">{overviewStats.weekRecords}</p>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase">Yeni Kayıt</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-black text-slate-800 tabular-nums">{overviewStats.reviewRate}%</p>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase">İnceleme Oranı</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Genel inceleme ilerlemesi */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 size={15} className="text-emerald-500" />
-                <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wide">İnceleme İlerlemesi</h3>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full transition-all duration-500" style={{ width: `${reviewProgress}%` }} />
-                </div>
-                <span className="text-sm font-black text-slate-700 tabular-nums shrink-0">%{reviewProgress}</span>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-2">{overviewStats.reviewed}/{overviewStats.totalRecords} kayıt incelendi</p>
-            </div>
           </div>
 
           {/* Yaklaşan Taramalar — Taramalar modülü bağlantısı */}
@@ -1697,7 +1514,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <Loader2 className="animate-spin" size={32} />
                 </div>
               }>
-                {stats && stats.totalRecords > 0 && <StatsCards stats={stats} />}
                 <AnalyticsView
                   stats={stats}
                   chartData={chartData}

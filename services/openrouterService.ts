@@ -65,6 +65,44 @@ const chatCompletion = async (
     return content as string;
 };
 
+export interface BatchPdfDocument { id: string; fileName: string; text: string; }
+export interface BatchPdfAnalysis { documentId: string; fileName: string; report: ExtractionReport; }
+
+/** Birden fazla PDF'i tek model çağrısında analiz eder. */
+export const analyzeMedicalTextBatchOpenRouter = async (
+    documents: BatchPdfDocument[],
+    tests: TestDefinition[],
+    retries = 5
+): Promise<BatchPdfAnalysis[]> => {
+    const flatTests = flattenTests(tests);
+    const targetTests = flatTests.map(t => `- "${t.name}" (key: ${t.key}, unit: ${t.unit || '-'})`).join('\n');
+    const input = documents.map(doc => `### DOCUMENT ${doc.id}\nFILE: ${doc.fileName}\n${filterRelevantContext(doc.text, tests)}`).join('\n\n');
+    const system = `You are a medical laboratory PDF extraction AI. Analyze every document independently and never mix patients. Return ONLY valid JSON with this schema: {"documents":[{"documentId":"string","fileName":"string","patientName":"string","registrationNumber":"string","jobTitle":"string","date":"string","extractedResults":[{"testName":"exact target name","value":"result","unit":"unit"}]}]}. Extract only requested tests. The patient result comes before units/reference ranges; do not return reference ranges. Correct OCR spacing and comma decimals. Preserve documentId exactly.`;
+    const prompt = `${system}\n\nTARGET TESTS:\n${targetTests}\n\nINPUT DOCUMENTS:\n${input}`;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const raw = await chatCompletion([{ role: 'system', content: system }, { role: 'user', content: prompt }], { temperature: 0.1, maxTokens: 16384, responseFormat: 'json_object' });
+            const parsed = JSON.parse(raw) as { documents?: Array<Record<string, unknown>> };
+            return documents.map(doc => {
+                const item = parsed.documents?.find(value => value.documentId === doc.id) || {};
+                const extractedResults = Array.isArray(item.extractedResults) ? item.extractedResults as ExtractedResult[] : [];
+                const normalized = extractedResults.map(res => {
+                    const def = flatTests.find(t => t.name === res.testName) || flatTests.find(t => normalizeTr(String(res.testName)).includes(normalizeTr(t.name)));
+                    let value: number | string = typeof res.value === 'string' ? res.value.trim().replace(/^(-?\d+),(\d+)$/, '$1.$2') : res.value;
+                    if (def?.type === 'numeric' && value !== '' && !Number.isNaN(Number(value))) value = Number(value);
+                    return { ...res, testName: def?.name || String(res.testName), value };
+                });
+                const foundTests = normalized.map(res => res.testName);
+                return { documentId: doc.id, fileName: doc.fileName, report: { patientName: String(item.patientName || ''), registrationNumber: String(item.registrationNumber || ''), jobTitle: String(item.jobTitle || ''), date: String(item.date || ''), extractedResults: normalized, foundTests, missingTests: flatTests.filter(t => !foundTests.includes(t.name)).map(t => t.name), totalTests: flatTests.length, foundCount: normalized.length } };
+            });
+        } catch (error) {
+            if (attempt === retries) throw error;
+            await delay(isRateLimitError(error) ? 60000 : 1000 * Math.pow(2, attempt - 1));
+        }
+    }
+    throw new Error('OpenRouter batch AI servisi kullanılamıyor');
+};
+
 // --- BAĞLANTI TESTİ ---
 export const testOpenRouterConnection = async (): Promise<string> => {
     const reply = await chatCompletion(

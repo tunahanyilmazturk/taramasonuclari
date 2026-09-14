@@ -12,6 +12,8 @@ export interface CustomModel {
 
 export type ModelCategory = 'latest' | 'gemini3' | 'custom';
 
+const MODEL_CATEGORIES: readonly ModelCategory[] = ['latest', 'gemini3', 'custom'];
+
 const KEYS = {
     API_KEY: 'mediscan_ai_api_key',
     MODELS: 'mediscan_ai_models',
@@ -191,7 +193,7 @@ export const aiConfigService = {
     // --- MODEL KATEGORİSİ ---
     getCategory: (): ModelCategory => {
         const raw = localStorage.getItem(KEYS.CATEGORY) as ModelCategory | null;
-        return raw || 'latest';
+        return raw && MODEL_CATEGORIES.includes(raw) ? raw : 'latest';
     },
 
     setCategory: (category: ModelCategory) => {
@@ -208,7 +210,7 @@ export const aiConfigService = {
     // --- AI SAĞLAYICI ---
     getProvider: (): AiProvider => {
         const raw = localStorage.getItem(KEYS.PROVIDER) as AiProvider | null;
-        return raw || 'gemini';
+        return raw === 'gemini' || raw === 'local' || raw === 'openrouter' ? raw : 'gemini';
     },
 
     setProvider: (provider: AiProvider) => {
