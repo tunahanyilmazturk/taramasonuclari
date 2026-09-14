@@ -331,7 +331,7 @@ export interface AppState {
 }
 
 /** Görünüm ayarları — tarayıcı-bazlı tema tercihleri */
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark';
 export type FontScale = 'sm' | 'md' | 'lg';
 
 export interface AppearanceSettings {

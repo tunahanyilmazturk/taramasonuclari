@@ -939,14 +939,13 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                   </div>
 
                   <div className="space-y-7 max-w-3xl">
-                      {/* TEMA — 3 seçenek (system eklendi) */}
+                      {/* TEMA */}
                       <section>
                           <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Tema</h4>
-                          <div className="grid grid-cols-3 gap-3">
+                          <div className="grid grid-cols-2 gap-3">
                               {([
                                   { id: 'light', label: 'Açık', desc: 'Klasik aydınlık', icon: Sun },
-                                  { id: 'dark', label: 'Koyu', desc: 'Gece modu', icon: Moon },
-                                  { id: 'system', label: 'Sistem', desc: 'İşletim sistemi takip', icon: Smartphone }
+                                  { id: 'dark', label: 'Koyu', desc: 'Gece modu', icon: Moon }
                               ] as const).map(t => (
                                   <button
                                       key={t.id}
@@ -964,11 +963,6 @@ export const Settings: React.FC<SettingsProps> = ({ fullState, onRestore, onRese
                                   </button>
                               ))}
                           </div>
-                          {appearance.theme === 'system' && (
-                              <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1.5">
-                                  <Smartphone size={11} /> Şu an aktif: <b>{window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'Koyu' : 'Açık'}</b> (işletim sistemi tercihine göre otomatik)
-                              </p>
-                          )}
                       </section>
 
                       {/* YAZI ÖLÇEĞİ — önizlemeli */}

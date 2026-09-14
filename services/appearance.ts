@@ -331,13 +331,11 @@ const MOTION_CSS = `
   }
 `;
 
-const systemDark = () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false;
-
 /** Kayıtlı/verilen görünümü DOM'a uygular */
 export const applyAppearance = (s?: AppearanceSettings) => {
   const a = s ?? storageService.getAppearance();
   const root = document.documentElement;
-  const dark = a.theme === 'dark' || (a.theme === 'system' && systemDark());
+  const dark = a.theme === 'dark';
 
   root.classList.toggle('dark', dark);
   root.classList.toggle('density-compact', a.compact);
@@ -351,16 +349,6 @@ export const applyAppearance = (s?: AppearanceSettings) => {
     document.head.appendChild(styleEl);
   }
   styleEl.textContent = `@media screen {\n${dark ? DARK_CSS : ''}\n${a.compact ? COMPACT_CSS : ''}\n}\n${a.reduceMotion ? MOTION_CSS : ''}`;
-};
-
-/** Sistem teması seçiliyken OS tercihini canlı takip et */
-let mediaBound = false;
-export const bindSystemThemeListener = () => {
-  if (mediaBound || !window.matchMedia) return;
-  mediaBound = true;
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if (storageService.getAppearance().theme === 'system') applyAppearance();
-  });
 };
 
 /** Kaydet + uygula — Settings'teki her değişiklikte çağrılır */
