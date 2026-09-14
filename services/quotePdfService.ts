@@ -46,12 +46,15 @@ const slugify = (s: string) => s
 // Kurumsal renk paleti — uygulamadaki mavi/slate diliyle uyumlu
 const C = {
   primary: '#2563eb',      // blue-600
+  primaryDark: '#1d4ed8', // blue-700
   primarySoft: '#eff6ff',  // blue-50
+  primarySofter: '#dbeafe',// blue-100
   ink: '#1e293b',          // slate-800
   muted: '#64748b',        // slate-500
   line: '#e2e8f0',         // slate-200
   softBg: '#f8fafc',       // slate-50
-  accent: '#1d4ed8'        // blue-700
+  white: '#ffffff',
+  danger: '#dc2626'
 };
 
 /** IndexedDB blob'unu pdfmake'in kullanabileceği dataURL'e çevirir */
@@ -70,6 +73,10 @@ const loadImageDataUrl = async (key?: string): Promise<string | null> => {
   try { return await blobToDataUrl(blob); } catch { return null; }
 };
 
+/** İletişim satırı — etiket + değer, noktalı virgülle ayrılmış */
+const contactLine = (label: string, value?: string): Content | null =>
+  value ? { text: [{ text: `${label}: `, bold: true, color: C.muted }, { text: value, color: C.ink }] } : null;
+
 // ── Doküman tanımı üretici ──
 
 const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocumentDefinitions> => {
@@ -82,42 +89,57 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
   const discount = quote.discountType === 'amount'
     ? Math.min(quote.discountRate, sub)
     : sub * ((quote.discountRate ?? 0) / 100);
-  const vat = (sub - discount) * ((quote.vatRate ?? 0) / 100);
-  const total = sub - discount + vat;
-
-  const orgContact = [org.phone, org.email, org.web, org.address].filter(Boolean).join('  ·  ');
-  const orgTax = [org.taxOffice && `${org.taxOffice} V.D.`, org.taxNumber && `VN: ${org.taxNumber}`].filter(Boolean).join(' · ');
+  const netTotal = sub - discount;
+  const vat = netTotal * ((quote.vatRate ?? 0) / 100);
+  const total = netTotal + vat;
+  const totalQuantity = quote.items.reduce((s, i) => s + i.quantity, 0);
+  const perUnit = totalQuantity > 0 ? total / totalQuantity : 0;
 
   const content: Content[] = [];
 
-  // ── Başlık bandı: kurum kimliği | teklif kimliği ──
+  // ════════════════════════════════════════════════════
+  // SAYFA 1 — KURUMSAL KAPAK
+  // ════════════════════════════════════════════════════
+
+  // ── Başlık bandı: mavi zeminli kurum kimliği ──
   content.push({
-    columns: [
-      ...(logoDataUrl ? [{ width: 48 as const, image: logoDataUrl, fit: [44, 44] as [number, number] }] : []),
-      {
-        width: '*',
-        stack: [
-          { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
-          ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
+    table: {
+      widths: ['*'],
+      body: [[{
+        columns: [
+          ...(logoDataUrl
+            ? [{ width: 56 as const, image: logoDataUrl, fit: [48, 48] as [number, number], margin: [0, 0, 12, 0] as [number, number, number, number] }]
+            : []),
+          {
+            width: '*',
+            stack: [
+              { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
+              ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
+            ],
+            margin: [logoDataUrl ? 0 : 4, 6, 0, 6] as [number, number, number, number]
+          },
+          {
+            width: 'auto',
+            stack: [
+              { text: 'FİYAT TEKLİFİ', style: 'docTitle', alignment: 'right' },
+              { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
+            ],
+            margin: [0, 6, 0, 6] as [number, number, number, number]
+          }
         ],
-        margin: logoDataUrl ? [10, 4, 0, 0] as [number, number, number, number] : [0, 0, 0, 0] as [number, number, number, number]
-      },
-      {
-        width: 'auto',
-        stack: [
-          { text: 'FİYAT TEKLİFİ', style: 'docTitle', alignment: 'right' },
-          { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
-        ]
-      }
-    ],
-    margin: [0, 0, 0, 10]
-  });
-  content.push({
-    canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: C.primary }],
-    margin: [0, 0, 0, 14]
+        margin: [16, 14, 16, 14] as [number, number, number, number]
+      }]]
+    },
+    layout: {
+      fillColor: () => C.primary,
+      hLineWidth: () => 0, vLineWidth: () => 0,
+      paddingLeft: () => 0, paddingRight: () => 0,
+      paddingTop: () => 0, paddingBottom: () => 0
+    },
+    margin: [0, 0, 0, 16]
   });
 
-  // ── Bilgi bloğu: firma | teklif detayları ──
+  // ── Bilgi bloğu: firma | teklif detayları (iki kart) ──
   const infoRows: [string, string][] = [
     ['Teklif No', quote.quoteNumber],
     ['Teklif Tarihi', trDate(quote.createdAt)],
@@ -125,157 +147,286 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     ['Teklif Türü', TYPE_LABEL[quote.quoteType ?? 'ise_giris']],
     ['Durum', STATUS_LABEL[quote.status]]
   ];
+
+  // Firma kartı
+  const companyStack: Content[] = [
+    { text: 'TEKLİF EDİLEN', style: 'cardLabel' },
+    { text: company?.name ?? '—', style: 'companyName', margin: [0, 4, 0, 4] }
+  ];
+  if (company?.contactPerson) companyStack.push(contactLine('Yetkili', company.contactPerson)!);
+  if (company?.phone) companyStack.push(contactLine('Telefon', company.phone)!);
+  if (company?.email) companyStack.push(contactLine('E-Posta', company.email)!);
+  if (company?.address) companyStack.push({ text: company.address, style: 'muted', margin: [0, 2, 0, 0] });
+
   content.push({
     columns: [
       {
         width: '55%',
-        stack: [
-          { text: 'SAYIN', style: 'blockLabel' },
-          { text: company?.name ?? '—', style: 'companyName' },
-          ...(company?.contactPerson ? [{ text: company.contactPerson, style: 'muted' }] : []),
-          ...([company?.phone, company?.email].filter(Boolean).length
-            ? [{ text: [company?.phone, company?.email].filter(Boolean).join('  ·  '), style: 'muted' }] : []),
-          ...(company?.address ? [{ text: company.address, style: 'muted' }] : [])
-        ]
+        table: {
+          widths: ['*'],
+          body: [[{ stack: companyStack, margin: [12, 10, 12, 10] as [number, number, number, number] }]]
+        },
+        layout: {
+          fillColor: () => C.softBg,
+          hLineWidth: () => 0.5, vLineWidth: () => 0,
+          hLineColor: () => C.line,
+          paddingTop: () => 0, paddingBottom: () => 0,
+          paddingLeft: () => 0, paddingRight: () => 0
+        },
+        margin: [0, 0, 8, 16]
       },
       {
         width: '45%',
-        layout: 'noBorders',
         table: {
           widths: ['auto', '*'],
-          body: infoRows.map(([k, v]) => [
-            { text: k, style: 'infoKey' },
-            { text: v, style: 'infoVal', alignment: 'right' }
-          ])
-        }
+          body: [
+            [{ text: 'TEKLİF DETAYI', style: 'cardLabel', colSpan: 2 }, ''],
+            ...infoRows.map(([k, v]) => [
+              { text: k, style: 'infoKey' },
+              { text: v, style: 'infoVal', alignment: 'right' }
+            ])
+          ]
+        },
+        layout: {
+          fillColor: () => C.white,
+          hLineWidth: (i: number) => i === 0 ? 0 : 0.5,
+          vLineWidth: () => 0,
+          hLineColor: () => C.line,
+          paddingTop: (i: number) => i === 0 ? 10 : 4,
+          paddingBottom: (i: number, node: { table: { body: unknown[] } }) => i === node.table.body.length - 1 ? 10 : 4,
+          paddingLeft: () => 12, paddingRight: () => 12
+        },
+        margin: [8, 0, 0, 16]
       }
-    ],
-    margin: [0, 0, 0, 16]
+    ]
   });
 
-  // ── Ön yazı ──
+  // ── Ön yazı — sol kenar çizgili kart ──
   if (quote.coverLetter && quote.includeCover !== false) {
     content.push({
       table: {
-        widths: ['*'],
-        body: [[{
-          stack: [
-            { text: 'ÖN YAZI', style: 'blockLabel', margin: [0, 0, 0, 6] },
-            { text: quote.coverLetter, style: 'body' }
-          ],
-          margin: [12, 10, 12, 10]
-        }]]
+        widths: [3, '*'],
+        body: [[
+          { text: '', fillColor: C.primary },
+          {
+            stack: [
+              { text: 'ÖN YAZI', style: 'blockLabel', margin: [0, 0, 0, 6] },
+              { text: quote.coverLetter, style: 'body' }
+            ],
+            margin: [12, 12, 14, 12] as [number, number, number, number],
+            fillColor: C.primarySoft
+          }
+        ]]
       },
       layout: {
-        fillColor: C.primarySoft,
         hLineWidth: () => 0, vLineWidth: () => 0,
+        paddingTop: () => 0, paddingBottom: () => 0,
         paddingLeft: () => 0, paddingRight: () => 0
       },
       margin: [0, 0, 0, 16]
     });
   }
 
-  // ── Şartlar ve koşullar (Sayfa 1) ──
+  // ── Şartlar ve koşullar — kart görselliği ──
   if (quote.terms?.length && quote.includeTerms !== false) {
     content.push({
-      stack: [
-        { text: 'ŞARTLAR VE KOŞULLAR', style: 'blockLabel', margin: [0, 0, 0, 6] },
-        { ol: quote.terms.map(t => ({ text: t, style: 'terms' })) }
-      ],
-      margin: [0, 0, 0, 14]
+      table: {
+        widths: ['*'],
+        body: [[{
+          stack: [
+            { text: 'ŞARTLAR VE KOŞULLAR', style: 'blockLabel', margin: [0, 0, 0, 8] },
+            { ol: quote.terms.map(t => ({ text: t, style: 'terms' })) }
+          ],
+          margin: [14, 12, 14, 12] as [number, number, number, number]
+        }]]
+      },
+      layout: {
+        fillColor: () => C.white,
+        hLineWidth: () => 0.5, vLineWidth: () => 0.5,
+        hLineColor: () => C.line, vLineColor: () => C.line,
+        paddingTop: () => 0, paddingBottom: () => 0,
+        paddingLeft: () => 0, paddingRight: () => 0
+      },
+      margin: [0, 0, 0, 16]
     });
   }
 
-  // ── İmza bloğu (Sayfa 1) ──
+  // ── İmza & iletişim bloğu — iki kart yan yana ──
+  const contactStack: Content[] = [];
+  if (org.phone) contactStack.push(contactLine('Telefon', org.phone)!);
+  if (org.email) contactStack.push(contactLine('E-Posta', org.email)!);
+  if (org.web) contactStack.push(contactLine('Web', org.web)!);
+  if (org.address) contactStack.push({ text: org.address, style: 'muted', margin: [0, 2, 0, 0] });
+  const taxLine = [org.taxOffice && `${org.taxOffice} V.D.`, org.taxNumber && `VKN: ${org.taxNumber}`].filter(Boolean).join(' · ');
+  if (taxLine) contactStack.push({ text: taxLine, style: 'muted', margin: [0, 4, 0, 0] });
+
   content.push({
     columns: [
+      // İletişim kartı
       {
         width: '*',
-        stack: orgContact || orgTax ? [
-          { text: 'İLETİŞİM', style: 'blockLabel', margin: [0, 0, 0, 4] },
-          ...(orgContact ? [{ text: orgContact, style: 'muted' }] : []),
-          ...(orgTax ? [{ text: orgTax, style: 'muted' }] : [])
-        ] : []
+        table: {
+          widths: ['*'],
+          body: [[{
+            stack: [
+              { text: 'KURUM İLETİŞİM', style: 'cardLabel', margin: [0, 0, 0, 8] },
+              ...(contactStack.length ? contactStack : [{ text: '—', style: 'muted' }])
+            ],
+            margin: [12, 10, 12, 10] as [number, number, number, number]
+          }]]
+        },
+        layout: {
+          fillColor: () => C.softBg,
+          hLineWidth: () => 0.5, vLineWidth: () => 0,
+          hLineColor: () => C.line,
+          paddingTop: () => 0, paddingBottom: () => 0,
+          paddingLeft: () => 0, paddingRight: () => 0
+        },
+        margin: [0, 0, 8, 0]
       },
+      // İmza kartı
       {
         width: 'auto',
-        stack: [
-          { text: 'Saygılarımızla,', style: 'muted', alignment: 'right' },
-          { text: org.name, style: 'signerOrg', alignment: 'right', margin: [0, 2, 0, 0] },
-          ...(signatureDataUrl
-            ? [{ image: signatureDataUrl, fit: [90, 36] as [number, number], alignment: 'right' as const, margin: [0, 6, 0, 2] as [number, number, number, number] }]
-            : []),
-          { text: org.signerName || ' ', style: 'signer', alignment: 'right', margin: [0, signatureDataUrl ? 4 : 22, 0, 0] },
-          { text: [org.signerTitle, trDate(quote.createdAt)].filter(Boolean).join(' · '), style: 'muted', alignment: 'right' }
-        ]
+        table: {
+          widths: [180],
+          body: [[{
+            stack: [
+              { text: 'Saygılarımızla,', style: 'muted', alignment: 'right' },
+              { text: org.name, style: 'signerOrg', alignment: 'right', margin: [0, 2, 0, 0] },
+              ...(signatureDataUrl
+                ? [{ image: signatureDataUrl, fit: [90, 36] as [number, number], alignment: 'right' as const, margin: [0, 6, 0, 2] as [number, number, number, number] }]
+                : []),
+              { text: org.signerName || ' ', style: 'signer', alignment: 'right', margin: [0, signatureDataUrl ? 4 : 22, 0, 0] },
+              { text: [org.signerTitle, trDate(quote.createdAt)].filter(Boolean).join(' · '), style: 'muted', alignment: 'right' }
+            ],
+            margin: [12, 10, 12, 10] as [number, number, number, number]
+          }]]
+        },
+        layout: {
+          fillColor: () => C.white,
+          hLineWidth: () => 0.5, vLineWidth: () => 0,
+          hLineColor: () => C.line,
+          paddingTop: () => 0, paddingBottom: () => 0,
+          paddingLeft: () => 0, paddingRight: () => 0
+        },
+        margin: [8, 0, 0, 0]
       }
     ],
     margin: [0, 8, 0, 0]
   });
 
-  // ── Sayfa sonu — teklif kalemleri yeni sayfada ──
+  // ════════════════════════════════════════════════════
+  // SAYFA 2 — TEKLİF KALEMLERİ & MALİ ÖZET
+  // ════════════════════════════════════════════════════
+
   content.push({ text: '', pageBreak: 'before' as const });
 
-  // ── Sayfa 2 başlığı ──
+  // ── Sayfa 2 başlık bandı ──
   content.push({
-    columns: [
-      {
-        width: '*',
-        stack: [
-          { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
-          ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
-        ]
-      },
-      {
-        width: 'auto',
-        stack: [
-          { text: 'FİYAT TEKLİFİ', style: 'docTitle', alignment: 'right' },
-          { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
-        ]
-      }
-    ],
-    margin: [0, 0, 0, 10]
+    table: {
+      widths: ['*'],
+      body: [[{
+        columns: [
+          {
+            width: '*',
+            stack: [
+              { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
+              ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
+            ],
+            margin: [4, 6, 0, 6] as [number, number, number, number]
+          },
+          {
+            width: 'auto',
+            stack: [
+              { text: 'TEKLİF KALEMLERİ', style: 'docTitle', alignment: 'right' },
+              { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
+            ],
+            margin: [0, 6, 0, 6] as [number, number, number, number]
+          }
+        ],
+        margin: [16, 14, 16, 14] as [number, number, number, number]
+      }]]
+    },
+    layout: {
+      fillColor: () => C.primary,
+      hLineWidth: () => 0, vLineWidth: () => 0,
+      paddingLeft: () => 0, paddingRight: () => 0,
+      paddingTop: () => 0, paddingBottom: () => 0
+    },
+    margin: [0, 0, 0, 16]
   });
+
+  // ── Firma özet şeridi ──
   content.push({
-    canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: C.primary }],
+    table: {
+      widths: ['auto', '*', 'auto', 'auto'],
+      body: [[
+        { text: 'FİRMA', style: 'stripLabel' },
+        { text: company?.name ?? '—', style: 'stripVal' },
+        { text: 'TÜR', style: 'stripLabel' },
+        { text: TYPE_LABEL[quote.quoteType ?? 'ise_giris'], style: 'stripVal', alignment: 'right' }
+      ]]
+    },
+    layout: {
+      fillColor: () => C.softBg,
+      hLineWidth: () => 0, vLineWidth: () => 0,
+      paddingTop: () => 6, paddingBottom: () => 6,
+      paddingLeft: () => 10, paddingRight: () => 10
+    },
     margin: [0, 0, 0, 14]
   });
 
-  // ── Kalem tablosu (Sayfa 2) ──
+  // ── Kalem tablosu — sıra no'lu ──
   content.push({ text: 'TEKLİF KALEMLERİ', style: 'blockLabel', margin: [0, 0, 0, 6] });
   content.push({
     table: {
       headerRows: 1,
-      widths: ['*', 50, 75, 80],
+      widths: [28, '*', 45, 70, 80],
       body: [
         [
+          { text: '#', style: 'th', alignment: 'center' },
           { text: 'KALEM / HİZMET', style: 'th' },
           { text: 'MİKTAR', style: 'th', alignment: 'center' },
           { text: 'BİRİM FİYAT', style: 'th', alignment: 'right' },
           { text: 'TUTAR', style: 'th', alignment: 'right' }
         ],
         ...quote.items.map((item, idx) => [
-          { text: item.name, style: 'td', fillColor: idx % 2 ? C.softBg : '#ffffff' },
-          { text: String(item.quantity), style: 'td', alignment: 'center', fillColor: idx % 2 ? C.softBg : '#ffffff' },
-          { text: `₺${fmtTL(item.unitPrice)}`, style: 'td', alignment: 'right', fillColor: idx % 2 ? C.softBg : '#ffffff' },
-          { text: `₺${fmtTL(item.quantity * item.unitPrice)}`, style: 'tdStrong', alignment: 'right', fillColor: idx % 2 ? C.softBg : '#ffffff' }
-        ])
+          { text: String(idx + 1), style: 'tdNo', alignment: 'center', fillColor: idx % 2 ? C.softBg : C.white },
+          { text: item.name, style: 'td', fillColor: idx % 2 ? C.softBg : C.white },
+          { text: String(item.quantity), style: 'td', alignment: 'center', fillColor: idx % 2 ? C.softBg : C.white },
+          { text: `₺${fmtTL(item.unitPrice)}`, style: 'td', alignment: 'right', fillColor: idx % 2 ? C.softBg : C.white },
+          { text: `₺${fmtTL(item.quantity * item.unitPrice)}`, style: 'tdStrong', alignment: 'right', fillColor: idx % 2 ? C.softBg : C.white }
+        ]),
+        // Alt toplam satırı
+        [
+          { text: '', style: 'tdTotal', colSpan: 2, alignment: 'right' },
+          { text: 'TOPLAM', style: 'tdTotalLabel', alignment: 'right' },
+          { text: String(totalQuantity), style: 'tdTotalVal', alignment: 'center' },
+          { text: '', style: 'tdTotal' },
+          { text: `₺${fmtTL(sub)}`, style: 'tdTotalVal', alignment: 'right' }
+        ]
       ]
     },
     layout: {
-      hLineWidth: (i: number, node: { table: { body: unknown[] } }) => (i === 0 || i === node.table.body.length) ? 0 : 0.5,
+      hLineWidth: (i: number, node: { table: { body: unknown[] } }) => {
+        // Başlık altı ve alt toplam üstü kalın çizgi
+        if (i === 1) return 1;
+        if (i === node.table.body.length - 1) return 1.5;
+        return 0.5;
+      },
       vLineWidth: () => 0,
-      hLineColor: C.line,
-      paddingTop: () => 5, paddingBottom: () => 5,
-      paddingLeft: () => 6, paddingRight: () => 6
+      hLineColor: (i: number, node: { table: { body: unknown[] } }) =>
+        i === 1 || i === node.table.body.length - 1 ? C.primary : C.line,
+      paddingTop: () => 6, paddingBottom: () => 6,
+      paddingLeft: () => 8, paddingRight: () => 8
     },
-    margin: [0, 0, 0, 10]
+    margin: [0, 0, 0, 14]
   });
 
-  // ── Mali özet — sağa yaslı (Sayfa 2) ──
-  const totalsBody = [
+  // ── Mali özet — iki sütun: sol açıklama, sağ tutar tablosu ──
+  const totalsBody: Content[][] = [
     [
-      { text: 'Ara Toplam', style: 'totKey' },
+      { text: 'Ara Toplam (KDV Hariç)', style: 'totKey' },
       { text: `₺${fmtTL(sub)}`, style: 'totVal' }
     ]
   ];
@@ -286,6 +437,10 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     ]);
   }
   totalsBody.push([
+    { text: 'Net Tutar', style: 'totKey' },
+    { text: `₺${fmtTL(netTotal)}`, style: 'totVal' }
+  ]);
+  totalsBody.push([
     { text: `KDV (%${quote.vatRate})`, style: 'totKey' },
     { text: `₺${fmtTL(vat)}`, style: 'totVal' }
   ]);
@@ -293,23 +448,71 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     { text: 'GENEL TOPLAM', style: 'totGrandKey' },
     { text: `₺${fmtTL(total)}`, style: 'totGrandVal' }
   ]);
+
+  // Sol: özet bilgiler
+  const summaryStack: Content[] = [
+    { text: 'ÖZET', style: 'cardLabel', margin: [0, 0, 0, 8] },
+    { text: [{ text: 'Kalem Sayısı: ', bold: true, color: C.muted }, { text: String(quote.items.length), color: C.ink }], style: 'muted', margin: [0, 0, 0, 3] },
+    { text: [{ text: 'Toplam Adet: ', bold: true, color: C.muted }, { text: String(totalQuantity), color: C.ink }], style: 'muted', margin: [0, 0, 0, 3] },
+    { text: [{ text: 'Birim Başına Ortalama: ', bold: true, color: C.muted }, { text: `₺${fmtTL(perUnit)}`, color: C.ink }], style: 'muted', margin: [0, 0, 0, 3] },
+    { text: [{ text: 'KDV Oranı: ', bold: true, color: C.muted }, { text: `%${quote.vatRate}`, color: C.ink }], style: 'muted' }
+  ];
+
   content.push({
     columns: [
-      { width: '*', text: '' },
       {
-        width: 190,
+        width: '*',
+        table: {
+          widths: ['*'],
+          body: [[{ stack: summaryStack, margin: [12, 10, 12, 10] as [number, number, number, number] }]]
+        },
+        layout: {
+          fillColor: () => C.softBg,
+          hLineWidth: () => 0.5, vLineWidth: () => 0,
+          hLineColor: () => C.line,
+          paddingTop: () => 0, paddingBottom: () => 0,
+          paddingLeft: () => 0, paddingRight: () => 0
+        },
+        margin: [0, 0, 8, 0]
+      },
+      {
+        width: 220,
         table: { widths: ['*', 'auto'], body: totalsBody },
         layout: {
-          // sadece genel toplam satırının üstünde ayırıcı çizgi
-          hLineWidth: (i: number, node: { table: { body: unknown[] } }) => i === node.table.body.length - 1 ? 1 : 0,
+          hLineWidth: (i: number, node: { table: { body: unknown[] } }) => i === node.table.body.length - 1 ? 1.5 : 0,
           vLineWidth: () => 0,
-          hLineColor: C.primary,
-          paddingTop: () => 3, paddingBottom: () => 3
+          hLineColor: (i: number, node: { table: { body: unknown[] } }) =>
+            i === node.table.body.length - 1 ? C.primary : C.line,
+          paddingTop: () => 5, paddingBottom: () => 5,
+          paddingLeft: () => 10, paddingRight: () => 10
         }
       }
     ],
     margin: [0, 0, 0, 18]
   });
+
+  // ── Alt not ──
+  if (quote.notes) {
+    content.push({
+      table: {
+        widths: ['*'],
+        body: [[{
+          stack: [
+            { text: 'NOT', style: 'blockLabel', margin: [0, 0, 0, 4] },
+            { text: quote.notes, style: 'muted' }
+          ],
+          margin: [12, 8, 12, 8] as [number, number, number, number]
+        }]]
+      },
+      layout: {
+        fillColor: () => C.softBg,
+        hLineWidth: () => 0, vLineWidth: () => 0,
+        paddingLeft: () => 0, paddingRight: () => 0,
+        paddingTop: () => 0, paddingBottom: () => 0
+      },
+      margin: [0, 0, 0, 0]
+    });
+  }
 
   return {
     pageSize: 'A4',
@@ -324,25 +527,32 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     content,
     defaultStyle: { fontSize: 9.5, color: C.ink },
     styles: {
-      brand: { fontSize: 17, bold: true, color: C.accent, characterSpacing: 0.5 },
-      brandSub: { fontSize: 8.5, color: C.muted, margin: [0, 2, 0, 0] },
-      docTitle: { fontSize: 15, bold: true, color: C.ink, characterSpacing: 1 },
-      docNo: { fontSize: 10, bold: true, color: C.primary, margin: [0, 3, 0, 0] },
+      brand: { fontSize: 17, bold: true, color: C.white, characterSpacing: 0.5 },
+      brandSub: { fontSize: 8.5, color: '#dbeafe', margin: [0, 2, 0, 0] },
+      docTitle: { fontSize: 14, bold: true, color: C.white, characterSpacing: 1 },
+      docNo: { fontSize: 10, bold: true, color: '#dbeafe', margin: [0, 3, 0, 0] },
       blockLabel: { fontSize: 8, bold: true, color: C.primary, characterSpacing: 1.2 },
-      companyName: { fontSize: 12, bold: true, color: C.ink, margin: [0, 2, 0, 3] },
+      cardLabel: { fontSize: 7.5, bold: true, color: C.muted, characterSpacing: 1.2 },
+      stripLabel: { fontSize: 7.5, bold: true, color: C.muted, characterSpacing: 1 },
+      stripVal: { fontSize: 9.5, bold: true, color: C.ink },
+      companyName: { fontSize: 12, bold: true, color: C.ink },
       muted: { fontSize: 8.5, color: C.muted, lineHeight: 1.35 },
       infoKey: { fontSize: 8.5, color: C.muted, bold: false },
       infoVal: { fontSize: 8.5, bold: true, color: C.ink },
       body: { fontSize: 9.5, color: C.ink, lineHeight: 1.5 },
-      th: { fontSize: 8, bold: true, color: '#ffffff', fillColor: C.primary, characterSpacing: 0.8 },
+      th: { fontSize: 8, bold: true, color: C.white, fillColor: C.primary, characterSpacing: 0.8 },
+      tdNo: { fontSize: 8.5, bold: true, color: C.muted },
       td: { fontSize: 9, color: C.ink },
       tdStrong: { fontSize: 9, bold: true, color: C.ink },
+      tdTotal: { fontSize: 9, color: C.ink, fillColor: C.primarySofter },
+      tdTotalLabel: { fontSize: 9, bold: true, color: C.primaryDark, fillColor: C.primarySofter },
+      tdTotalVal: { fontSize: 9.5, bold: true, color: C.primaryDark, fillColor: C.primarySofter },
       totKey: { fontSize: 8.5, color: C.muted, alignment: 'right' },
       totVal: { fontSize: 9, bold: true, color: C.ink, alignment: 'right' },
-      totValDiscount: { fontSize: 9, bold: true, color: '#dc2626', alignment: 'right' },
-      totGrandKey: { fontSize: 9.5, bold: true, color: C.ink, alignment: 'right' },
-      totGrandVal: { fontSize: 11.5, bold: true, color: C.primary, alignment: 'right' },
-      terms: { fontSize: 8.5, color: C.muted, lineHeight: 1.4, margin: [0, 0, 0, 2] },
+      totValDiscount: { fontSize: 9, bold: true, color: C.danger, alignment: 'right' },
+      totGrandKey: { fontSize: 10, bold: true, color: C.ink, alignment: 'right' },
+      totGrandVal: { fontSize: 12, bold: true, color: C.primary, alignment: 'right' },
+      terms: { fontSize: 8.5, color: C.muted, lineHeight: 1.4, margin: [0, 0, 0, 3] },
       signerOrg: { fontSize: 10, bold: true, color: C.ink },
       signer: { fontSize: 9.5, bold: true, color: C.ink, decoration: 'underline' as const },
       footer: { fontSize: 7.5, color: C.muted }
