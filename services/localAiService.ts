@@ -226,9 +226,9 @@ const buildAliases = (test: TestDefinition): string[] => {
         'pnomokonyoz_1': ['pnmokonyoz', 'pnömokonyoz', 'pnomokonyoz', 'ilo', 'radyografi okuma', 'dier yorumlar', 'diğer yorumlar', '4d', '4d. diğer yorumlar'],
         'pnomokonyoz_2': ['pnmokonyoz', 'pnömokonyoz', 'pnomokonyoz', 'ilo', 'radyografi okuma', 'dier yorumlar', 'diğer yorumlar', '4d', '4d. diğer yorumlar'],
         // Servikal Grafi — radyoloji raporu
-        'servikal_grafi': ['servikal grafi', 'servikal vertebra grafi', 'servikal', 'cervical', 'iki yönlü servikal', 'servikal vertebra'],
+        'servikal_grafi': ['servikal grafi', 'servikal grafide', 'servikal vertebra grafi', 'servikal', 'cervical', 'iki yönlü servikal', 'servikal vertebra'],
         // Lumbosakral Grafi — radyoloji raporu
-        'lumbosakral_grafi': ['lumbosakral grafi', 'lumbosakral', 'lumbar', 'iki yönlü lumbosakral', 'lumbosakral vertebra', 'lomber'],
+        'lumbosakral_grafi': ['lumbosakral grafi', 'lumbosakral grafide', 'lumbosakral', 'lumbar', 'iki yönlü lumbosakral', 'lumbosakral vertebra', 'lomber'],
         // Ek-2 Belgesi
         'ek_2_belgesi': ['ek-2', 'ek 2 belgesi', 'ek-2 belgesi', 'ek2']
     };
@@ -440,6 +440,16 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
 
     // Servikal Grafi — radyoloji raporu
     if (test.key.includes('servikal')) {
+        // SONUÇ: satırını özel olarak yakala
+        const sonucMatch = cleaned.match(/sonu[cç]\s*[:=]\s*(.+)/i);
+        if (sonucMatch) {
+            const sonuc = sonucMatch[1].trim();
+            if (includesTr(normalizeTr(sonuc), 'normal') || includesTr(normalizeTr(sonuc), 'tabii') ||
+                includesTr(normalizeTr(sonuc), 'sağlam')) {
+                return 'Normal Servikal Vertebra Grafisi';
+            }
+            if (sonuc.length > 3) return sonuc;
+        }
         if (includesTr(norm, 'normal') || includesTr(norm, 'tabii') || includesTr(norm, 'doğaldır') ||
             includesTr(norm, 'patoloji izlenmedi') || includesTr(norm, 'normal sınırlarda') ||
             includesTr(norm, 'sağlam') || includesTr(norm, 'normaldir')) {
@@ -451,6 +461,16 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
 
     // Lumbosakral Grafi — radyoloji raporu
     if (test.key.includes('lumbosakral') || test.key.includes('lumbar') || test.key.includes('lomber')) {
+        // SONUÇ: satırını özel olarak yakala
+        const sonucMatch = cleaned.match(/sonu[cç]\s*[:=]\s*(.+)/i);
+        if (sonucMatch) {
+            const sonuc = sonucMatch[1].trim();
+            if (includesTr(normalizeTr(sonuc), 'normal') || includesTr(normalizeTr(sonuc), 'tabii') ||
+                includesTr(normalizeTr(sonuc), 'sağlam')) {
+                return 'Normal Lumbosakral Vertebra Grafisi';
+            }
+            if (sonuc.length > 3) return sonuc;
+        }
         if (includesTr(norm, 'normal') || includesTr(norm, 'tabii') || includesTr(norm, 'doğaldır') ||
             includesTr(norm, 'patoloji izlenmedi') || includesTr(norm, 'normal sınırlarda') ||
             includesTr(norm, 'sağlam') || includesTr(norm, 'normaldir')) {
