@@ -81,13 +81,30 @@ export const DEFAULT_TESTS: TestDefinition[] = [
   { id: '7', name: 'AST', key: 'ast', unit: 'U/L', type: 'numeric', range: { min: 0, max: 40 } },
   { id: '8', name: 'Kreatinin', key: 'kreatinin', unit: 'mg/dL', type: 'numeric', range: { min: 0.7, max: 1.2 } },
   
-  // Görüntüleme ve Diğerleri
+  // Görüntüleme (Radyolojik)
   { id: '9', name: 'Akciğer Grafisi', key: 'akciger_grafisi', unit: 'Sonuç', type: 'text' },
-  { id: '10', name: 'Odyometri (İşitme)', key: 'odyometri', unit: 'dB', type: 'text' },
-  { id: '11', name: 'Göz Muayenesi', key: 'goz', unit: 'Not', type: 'text' },
-  { id: '12', name: 'EKG', key: 'ekg', unit: 'Bulgu', type: 'text' },
-  { id: '13', name: 'Tetanoz', key: 'tetanoz', unit: 'Aşı Durumu', type: 'text' },
+  { id: '9a', name: 'Lumbosakral Grafi', key: 'lumbosakral_grafi', unit: 'Sonuç', type: 'text' },
+  { id: '9b', name: 'Servikal Grafi', key: 'servikal_grafi', unit: 'Sonuç', type: 'text' },
+
+  // Muayene
+  { id: '9c', name: 'Ek-2 Belgesi', key: 'ek_2_belgesi', unit: 'Sonuç', type: 'text' },
+
+  // Kan Grubu
   { id: '14', name: 'Kan Grubu', key: 'kan_grubu', unit: 'Grup', type: 'text' },
+
+  // Aşı
+  { id: '13', name: 'Tetanoz', key: 'tetanoz', unit: 'Aşı Durumu', type: 'text' },
+
+  // EKG
+  { id: '12', name: 'EKG', key: 'ekg', unit: 'Bulgu', type: 'text' },
+
+  // Göz Muayenesi
+  { id: '11', name: 'Göz Muayenesi', key: 'goz', unit: 'Not', type: 'text' },
+
+  // Odyometri
+  { id: '10', name: 'Odyometri (İşitme)', key: 'odyometri', unit: 'dB', type: 'text' },
+
+  // Solunum Fonksiyon Testi
   { id: '15', name: 'Solunum Fonksiyon Testi (SFT)', key: 'sft', unit: 'Sonuç', type: 'text' },
 
   // --- PORTÖR MUAYENESİ (ARTIK AYRI AYRI) ---
@@ -131,9 +148,22 @@ export const TEST_DEFAULT_PRICES: Record<string, number> = {
   hbsag_val: 200, anti_hbs_val: 200, anti_hcv_val: 200, anti_hiv_val: 200,
   // Biyokimya
   glikoz: 60, kolesterol: 80, alt: 60, ast: 60, kreatinin: 60,
-  // Muayene & görüntüleme
-  akciger_grafisi: 250, odyometri: 200, goz: 150, ekg: 150,
-  tetanoz: 250, kan_grubu: 100, sft: 200,
+  // Görüntüleme
+  akciger_grafisi: 250, lumbosakral_grafi: 250, servikal_grafi: 250,
+  // Muayene
+  ek_2_belgesi: 150,
+  // Kan Grubu
+  kan_grubu: 100,
+  // Aşı
+  tetanoz: 250,
+  // EKG
+  ekg: 150,
+  // Göz Muayenesi
+  goz: 150,
+  // Odyometri
+  odyometri: 200,
+  // Solunum Fonksiyon
+  sft: 200,
   // Portör kültürleri
   burun_kulturu: 100, bogaz_kulturu: 100, gaita_kulturu: 100, gaita_mikroskopi: 80,
   // Toksikoloji baz
@@ -155,7 +185,14 @@ export const TEST_CATEGORIES: string[] = [
   'Paneller',
   'Seroloji',
   'Biyokimya',
-  'Muayene & Görüntüleme',
+  'Görüntüleme',
+  'Muayene',
+  'Kan Grubu',
+  'Aşı',
+  'EKG',
+  'Göz Muayenesi',
+  'Odyometri',
+  'Solunum Fonksiyon',
   'Portör Kültürleri',
   'Ağır Metaller',
   'Toksikoloji',
@@ -169,17 +206,32 @@ export const DEFAULT_TEST_CATEGORIES: Record<string, string> = {
   hbsag_kart: 'Seroloji', anti_hbs_kart: 'Seroloji', anti_hcv_kart: 'Seroloji', anti_hiv_kart: 'Seroloji',
   hbsag_val: 'Seroloji', anti_hbs_val: 'Seroloji', anti_hcv_val: 'Seroloji', anti_hiv_val: 'Seroloji',
   glikoz: 'Biyokimya', kolesterol: 'Biyokimya', alt: 'Biyokimya', ast: 'Biyokimya', kreatinin: 'Biyokimya',
-  akciger_grafisi: 'Muayene & Görüntüleme', odyometri: 'Muayene & Görüntüleme', goz: 'Muayene & Görüntüleme',
-  ekg: 'Muayene & Görüntüleme', tetanoz: 'Muayene & Görüntüleme', kan_grubu: 'Muayene & Görüntüleme',
-  sft: 'Muayene & Görüntüleme',
+  // Görüntüleme (radyolojik)
+  akciger_grafisi: 'Görüntüleme', lumbosakral_grafi: 'Görüntüleme', servikal_grafi: 'Görüntüleme',
+  pnomokonyoz_1: 'Görüntüleme', pnomokonyoz_2: 'Görüntüleme',
+  // Muayene
+  ek_2_belgesi: 'Muayene',
+  // Kan Grubu
+  kan_grubu: 'Kan Grubu',
+  // Aşı
+  tetanoz: 'Aşı',
+  // EKG
+  ekg: 'EKG',
+  // Göz Muayenesi
+  goz: 'Göz Muayenesi',
+  // Odyometri
+  odyometri: 'Odyometri',
+  // Solunum Fonksiyon
+  sft: 'Solunum Fonksiyon',
+  // Portör
   burun_kulturu: 'Portör Kültürleri', bogaz_kulturu: 'Portör Kültürleri',
   gaita_kulturu: 'Portör Kültürleri', gaita_mikroskopi: 'Portör Kültürleri',
+  // Ağır Metaller
   krom: 'Ağır Metaller', kadmiyum: 'Ağır Metaller', manganez: 'Ağır Metaller', civa: 'Ağır Metaller', kursun: 'Ağır Metaller',
+  // Toksikoloji
   kreatinin_spot_idrar: 'Toksikoloji', mukonik_asit: 'Toksikoloji', mukonik_asit_oran: 'Toksikoloji',
   fenol_idrar: 'Toksikoloji', fenol_oran: 'Toksikoloji', hidroksipiren: 'Toksikoloji',
-  benzen_idrar: 'Toksikoloji', o_kresol: 'Toksikoloji',
-  pnomokonyoz_1: 'Muayene & Görüntüleme',
-  pnomokonyoz_2: 'Muayene & Görüntüleme'
+  benzen_idrar: 'Toksikoloji', o_kresol: 'Toksikoloji'
 };
 
 /** Testin etkin kategorisi — test.category varsa o, yoksa key bazlı varsayılan */
