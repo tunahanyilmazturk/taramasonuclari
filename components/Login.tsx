@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   User, Lock, ArrowRight, AlertCircle, ShieldCheck, Timer,
-  Stethoscope, Shield, Users, Eye, EyeOff, Database, HeartPulse, ChevronRight
+  Stethoscope, Shield, Users, Eye, EyeOff, Database, HeartPulse, ChevronRight, Sparkles
 } from 'lucide-react';
 import { storageService } from '../services/storageService';
 import { hashPassword } from '../utils/security';
@@ -94,15 +94,85 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onLoadDemoData }) => {
           </div>
         </div>
 
-        {/* Ana mesaj */}
+        {/* Ana mesaj + illüstrasyon */}
         <div className="relative z-10 max-w-md">
           <h2 className="text-4xl font-black leading-tight mb-4">
             Tekliften rapora<br />
             <span className="text-blue-400">tek platform.</span>
           </h2>
-          <p className="text-slate-400 text-sm leading-relaxed">
+          <p className="text-slate-400 text-sm leading-relaxed mb-10">
             Firmalara fiyat teklifi hazırlayın, mobil tarama operasyonlarınızı planlayın ve laboratuvar PDF sonuçlarını yapay zeka ile saniyeler içinde okutun.
           </p>
+
+          {/* ═══ ÜRÜN İLLÜSTRASYONU — floating kartlar ═══ */}
+          <div className="relative h-64 select-none" aria-hidden="true">
+
+            {/* Arka dekor — EKG çizgisi */}
+            <svg className="absolute inset-x-0 top-1/2 -translate-y-1/2 w-full h-20 opacity-20" viewBox="0 0 400 60" fill="none" preserveAspectRatio="none">
+              <path
+                d="M0 30 L60 30 L75 30 L82 8 L90 52 L97 15 L104 30 L130 30 L145 30 L152 20 L160 40 L167 30 L200 30 L215 30 L222 5 L230 55 L237 12 L244 30 L270 30 L285 30 L292 22 L300 38 L307 30 L340 30 L355 30 L362 10 L370 50 L377 18 L384 30 L400 30"
+                stroke="url(#ekgGrad)" strokeWidth="1.5" strokeLinejoin="round"
+              />
+              <defs>
+                <linearGradient id="ekgGrad" x1="0" x2="400" gradientUnits="userSpaceOnUse">
+                  <stop stopColor="#3b82f6" stopOpacity="0" />
+                  <stop offset="0.5" stopColor="#60a5fa" />
+                  <stop offset="1" stopColor="#3b82f6" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            {/* Kart 1 — Hasta sonuç kartı (ana, sol üst) */}
+            <div className="absolute left-0 top-2 w-56 bg-white rounded-xl shadow-2xl shadow-black/40 p-3.5 rotate-[-3deg] hover:rotate-0 transition-transform duration-300">
+              <div className="flex items-center gap-2.5 mb-2.5">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+                  <HeartPulse size={14} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-slate-800 leading-none">BARIŞ ÇALIK</p>
+                  <p className="text-[8px] text-slate-400 mt-0.5">İşe Giriş Muayenesi</p>
+                </div>
+                <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200">İşlendi</span>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-slate-500">Hemoglobin</span>
+                  <span className="text-[9px] font-bold text-slate-700">14.2 g/dL</span>
+                  <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-emerald-50 text-emerald-600">Normal</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-slate-500">Lökosit (WBC)</span>
+                  <span className="text-[9px] font-bold text-slate-700">11.4 K/uL</span>
+                  <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-amber-50 text-amber-600">Yüksek</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-slate-500">Glikoz</span>
+                  <span className="text-[9px] font-bold text-slate-700">92 mg/dL</span>
+                  <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-emerald-50 text-emerald-600">Normal</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Kart 2 — Analiz grafiği (sağ, biraz aşağıda) */}
+            <div className="absolute right-0 top-16 w-44 bg-white rounded-xl shadow-2xl shadow-black/40 p-3 rotate-[4deg] hover:rotate-0 transition-transform duration-300">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-2">Haftalık Tarama</p>
+              <div className="flex items-end gap-1.5 h-14">
+                {[35, 55, 40, 70, 50, 85, 65].map((h, i) => (
+                  <div key={i} className="flex-1 rounded-t-sm bg-gradient-to-t from-blue-600 to-blue-400" style={{ height: `${h}%` }} />
+                ))}
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[8px] text-slate-400">Pzt — Paz</span>
+                <span className="text-[9px] font-bold text-emerald-600">+18%</span>
+              </div>
+            </div>
+
+            {/* Kart 3 — AI badge (sol alt, küçük) */}
+            <div className="absolute left-8 bottom-2 bg-slate-800/80 backdrop-blur border border-white/10 rounded-lg px-3 py-2 flex items-center gap-2 rotate-[-2deg]">
+              <Sparkles size={12} className="text-amber-400" />
+              <span className="text-[9px] font-bold text-slate-200">AI ile 42 PDF işlendi</span>
+            </div>
+          </div>
         </div>
 
         {/* Alt bilgi */}
