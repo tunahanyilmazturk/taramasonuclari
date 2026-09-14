@@ -14,7 +14,7 @@ import {
   Play, CheckCircle2, Edit2, Trash2, X,
   Building2, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays,
   ClipboardList, FileCheck, ChevronDown, Factory, Clock,
-  FileText, ScrollText, ChevronUp, RotateCcw
+  FileText, ScrollText, ChevronUp, RotateCcw, Calculator, Percent
 } from 'lucide-react';
 
 const STATUS_META: Record<ScreeningStatus, { label: string; badge: string; dot: string }> = {
@@ -105,8 +105,22 @@ const WIZARD_STEPS = [
   { key: 2, label: 'Testler', desc: 'Tetkik seçimi', icon: FlaskConical },
   { key: 3, label: 'Ön Yazı', desc: 'Tarama giriş metni', icon: FileText },
   { key: 4, label: 'Şartlar', desc: 'Koşul maddeleri', icon: ScrollText },
-  { key: 5, label: 'Önizleme', desc: 'Kontrol & kaydet', icon: FileCheck }
+  { key: 5, label: 'Maliyet', desc: 'Fiyat & bütçe', icon: Calculator },
+  { key: 6, label: 'Önizleme', desc: 'Kontrol & kaydet', icon: FileCheck }
 ];
+
+/** Maliyet hesaplama yardımcıları */
+const num = (v: string) => parseFloat(v) || 0;
+const calcSubtotal = (perPerson: string, count: string, extra: string) => num(perPerson) * num(count) + num(extra);
+const calcDiscount = (subtotal: number, discount: string) => Math.max(0, Math.min(subtotal, num(discount)));
+const calcVat = (afterDiscount: number, vatRate: string) => afterDiscount * (num(vatRate) / 100);
+const calcTotal = (perPerson: string, count: string, extra: string, discount: string, vatRate: string) => {
+  const sub = calcSubtotal(perPerson, count, extra);
+  const disc = calcDiscount(sub, discount);
+  const vat = calcVat(sub - disc, vatRate);
+  return { sub, disc, vat, total: sub - disc + vat };
+};
+const fmtTL = (n: number) => n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' TL';
 
 interface ScreeningForm {
   companyId: string;
@@ -124,6 +138,12 @@ interface ScreeningForm {
   coverLetter: string;
   coverLetterEdited: boolean;
   terms: string[];
+  // Maliyet & fiyatlandırma
+  perPersonPrice: string;
+  extraCosts: string;
+  discount: string;
+  vatRate: string;
+  costNotes: string;
 }
 
 const emptyForm = (): ScreeningForm => ({
@@ -141,7 +161,12 @@ const emptyForm = (): ScreeningForm => ({
   titleTouched: false,
   coverLetter: '',
   coverLetterEdited: false,
-  terms: []
+  terms: [],
+  perPersonPrice: '',
+  extraCosts: '',
+  discount: '',
+  vatRate: '20',
+  costNotes: ''
 });
 
 /** Sihirbaz adım başlığı — Quotes ile aynı kompakt görünüm */
@@ -303,7 +328,12 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
         titleTouched: f.titleTouched ?? false,
         coverLetter: f.coverLetter ?? '',
         coverLetterEdited: f.coverLetterEdited ?? false,
-        terms: f.terms ?? []
+        terms: f.terms ?? [],
+        perPersonPrice: f.perPersonPrice ?? '',
+        extraCosts: f.extraCosts ?? '',
+        discount: f.discount ?? '',
+        vatRate: f.vatRate ?? '20',
+        costNotes: f.costNotes ?? ''
       });
       setEditingId(draft.editingId ?? null);
       setWizardStep(draft.wizardStep || 1);
@@ -370,7 +400,12 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
       titleTouched: true,
       coverLetter: s.coverLetter ?? '',
       coverLetterEdited: !!s.coverLetter,
-      terms: [...(s.terms ?? [])]
+      terms: [...(s.terms ?? [])],
+      perPersonPrice: s.perPersonPrice ? String(s.perPersonPrice) : '',
+      extraCosts: s.extraCosts ? String(s.extraCosts) : '',
+      discount: s.discount ? String(s.discount) : '',
+      vatRate: s.vatRate != null ? String(s.vatRate) : '20',
+      costNotes: s.costNotes ?? ''
     });
     setFormError('');
     setTestSearch('');
@@ -439,7 +474,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
   const canProceed = (): boolean => {
     if (wizardStep === 1) return !!form.companyId && !!form.title.trim() && !!form.date;
     if (wizardStep === 2) return form.testIds.size > 0;
-    return true; // adım 3, 4, 5 opsiyonel
+    return true; // adım 3, 4, 5, 6 opsiyonel
   };
 
   const stepDone = (key: number): boolean => {
@@ -447,6 +482,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
     if (key === 2) return form.testIds.size > 0;
     if (key === 3) return form.coverLetter.trim().length > 0;
     if (key === 4) return form.terms.length > 0;
+    if (key === 5) return parseFloat(form.perPersonPrice) > 0;
     return false;
   };
 
@@ -462,7 +498,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
       return;
     }
     setFormError('');
-    goToStep(Math.min(5, wizardStep + 1));
+    goToStep(Math.min(6, wizardStep + 1));
   };
 
   const goBack = () => goToStep(Math.max(1, wizardStep - 1));
@@ -486,7 +522,12 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
       plannedCount: Math.max(0, parseInt(form.plannedCount) || 0),
       completedCount: Math.max(0, parseInt(form.completedCount) || 0),
       coverLetter: form.coverLetter.trim() || undefined,
-      terms: form.terms.length > 0 ? form.terms : undefined
+      terms: form.terms.length > 0 ? form.terms : undefined,
+      perPersonPrice: parseFloat(form.perPersonPrice) || undefined,
+      extraCosts: parseFloat(form.extraCosts) || undefined,
+      discount: parseFloat(form.discount) || undefined,
+      vatRate: parseFloat(form.vatRate) || undefined,
+      costNotes: form.costNotes.trim() || undefined
     };
 
     if (editingId) {
@@ -858,6 +899,10 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                 <div className="flex justify-between text-slate-300"><span>Saat</span><span className="font-bold text-white">{form.startTime} - {form.endTime}</span></div>
                 <div className="flex justify-between text-slate-300"><span>Test</span><span className="font-bold text-white">{form.testIds.size}</span></div>
                 <div className="flex justify-between text-slate-300"><span>Kişi</span><span className="font-bold text-white">{form.plannedCount || '—'}</span></div>
+                {num(form.perPersonPrice) > 0 && (() => {
+                  const { total } = calcTotal(form.perPersonPrice, form.plannedCount, form.extraCosts, form.discount, form.vatRate);
+                  return <div className="flex justify-between text-blue-400 pt-1.5 border-t border-slate-700"><span>Toplam</span><span className="font-bold text-white tabular-nums">{fmtTL(total)}</span></div>;
+                })()}
               </div>
             </div>
           </aside>
@@ -1423,8 +1468,117 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
               </div>
             )}
 
-            {/* ══ ADIM 5: ÖNİZLEME & KAYDET ══ */}
+            {/* ══ ADIM 5: MALİYET & FİYATLANDIRMA ══ */}
             {wizardStep === 5 && (
+              <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <StepHeader icon={Calculator} title="Maliyet & Fiyatlandırma" desc="Tarama maliyetini ve fiyatını hesaplayın" />
+
+                <div className="max-w-3xl mx-auto space-y-5">
+                  <Panel icon={Calculator} title="Fiyatlandırma" bodyClassName="p-5 space-y-5">
+                    {/* Kişi başı fiyat + kişi sayısı */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}><Users size={10} className="inline mr-1"/>Kişi Başı Fiyat (TL)</label>
+                        <div className="relative">
+                          <input type="number" min="0" step="0.01" value={form.perPersonPrice} onChange={(e) => setForm(prev => ({ ...prev, perPersonPrice: e.target.value }))} className={inputCls} placeholder="0.00" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">TL</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1.5">Personel başı alınacak ücret</p>
+                      </div>
+                      <div>
+                        <label className={labelCls}><Users size={10} className="inline mr-1"/>Planlanan Kişi</label>
+                        <input type="number" min="0" value={form.plannedCount} onChange={(e) => setForm(prev => ({ ...prev, plannedCount: e.target.value }))} className={inputCls} placeholder="0" />
+                        <p className="text-[10px] text-slate-400 mt-1.5">1. adımdan otomatik gelir</p>
+                      </div>
+                    </div>
+
+                    {/* Ek maliyetler + indirim */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className={labelCls}>Ek Maliyetler (TL)</label>
+                        <div className="relative">
+                          <input type="number" min="0" step="0.01" value={form.extraCosts} onChange={(e) => setForm(prev => ({ ...prev, extraCosts: e.target.value }))} className={inputCls} placeholder="0.00" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">TL</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1.5">Seyahat, konaklama, yemek vb.</p>
+                      </div>
+                      <div>
+                        <label className={labelCls}>İndirim (TL)</label>
+                        <div className="relative">
+                          <input type="number" min="0" step="0.01" value={form.discount} onChange={(e) => setForm(prev => ({ ...prev, discount: e.target.value }))} className={inputCls} placeholder="0.00" />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">TL</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1.5">Toplam tutardan düşülür</p>
+                      </div>
+                    </div>
+
+                    {/* KDV oranı */}
+                    <div>
+                      <label className={labelCls}><Percent size={10} className="inline mr-1"/>KDV Oranı (%)</label>
+                      <div className="relative max-w-[200px]">
+                        <input type="number" min="0" max="100" step="1" value={form.vatRate} onChange={(e) => setForm(prev => ({ ...prev, vatRate: e.target.value }))} className={inputCls} placeholder="20" />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">%</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1.5">Standart KDV oranı %20</p>
+                    </div>
+
+                    {/* Maliyet notları */}
+                    <div>
+                      <label className={labelCls}>Maliyet Notları</label>
+                      <textarea value={form.costNotes} onChange={(e) => setForm(prev => ({ ...prev, costNotes: e.target.value }))} className={inputCls + ' min-h-[80px] resize-y'} placeholder="Ödeme vadesi, fatura detayları, özel koşullar..." />
+                    </div>
+                  </Panel>
+
+                  {/* Canlı maliyet hesaplama kartı */}
+                  <Panel icon={Calculator} title="Maliyet Hesabı" bodyClassName="p-5">
+                    {(() => {
+                      const { sub, disc, vat, total } = calcTotal(form.perPersonPrice, form.plannedCount, form.extraCosts, form.discount, form.vatRate);
+                      const personTotal = num(form.perPersonPrice) * num(form.plannedCount);
+                      return (
+                        <div className="space-y-2.5">
+                          <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100">
+                            <span className="text-slate-500 flex items-center gap-1.5"><Users size={12}/> Kişi Başı × Kişi Sayısı</span>
+                            <span className="font-bold text-slate-700 tabular-nums">{fmtTL(personTotal)}</span>
+                          </div>
+                          {num(form.extraCosts) > 0 && (
+                            <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100">
+                              <span className="text-slate-500">Ek Maliyetler</span>
+                              <span className="font-bold text-slate-700 tabular-nums">+{fmtTL(num(form.extraCosts))}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100">
+                            <span className="text-slate-500 font-bold">Ara Toplam</span>
+                            <span className="font-black text-slate-800 tabular-nums">{fmtTL(sub)}</span>
+                          </div>
+                          {disc > 0 && (
+                            <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100">
+                              <span className="text-emerald-600 font-bold">İndirim</span>
+                              <span className="font-bold text-emerald-600 tabular-nums">-{fmtTL(disc)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100">
+                            <span className="text-slate-500">KDV (%{form.vatRate || '0'})</span>
+                            <span className="font-bold text-slate-700 tabular-nums">+{fmtTL(vat)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm py-3 bg-blue-50 rounded-xl px-3 mt-2">
+                            <span className="font-black text-blue-800">Genel Toplam</span>
+                            <span className="font-black text-blue-700 tabular-nums text-lg">{fmtTL(total)}</span>
+                          </div>
+                          {num(form.plannedCount) > 0 && num(form.perPersonPrice) > 0 && (
+                            <p className="text-[10px] text-slate-400 text-center pt-1">
+                              Kişi başı net maliyet: <span className="font-bold text-slate-600">{fmtTL(total / num(form.plannedCount))}</span>
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </Panel>
+                </div>
+              </div>
+            )}
+
+            {/* ══ ADIM 6: ÖNİZLEME & KAYDET ══ */}
+            {wizardStep === 6 && (
               <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <StepHeader icon={FileCheck} title="Önizleme & Onay" desc="Tarama detaylarını kontrol edip kaydedin" />
 
@@ -1502,6 +1656,44 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                           </ol>
                         </div>
                       )}
+
+                      {/* Maliyet özeti */}
+                      {(parseFloat(form.perPersonPrice) > 0 || parseFloat(form.extraCosts) > 0) && (() => {
+                        const { disc, vat, total } = calcTotal(form.perPersonPrice, form.plannedCount, form.extraCosts, form.discount, form.vatRate);
+                        return (
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                              <Calculator size={12} /> Maliyet Özeti
+                            </p>
+                            <div className="bg-blue-50/30 border border-blue-100 rounded-xl p-3 space-y-1.5 text-xs">
+                              <div className="flex justify-between text-slate-600">
+                                <span>Kişi Başı × {form.plannedCount || '0'} kişi</span>
+                                <span className="font-bold tabular-nums">{fmtTL(num(form.perPersonPrice) * num(form.plannedCount))}</span>
+                              </div>
+                              {num(form.extraCosts) > 0 && (
+                                <div className="flex justify-between text-slate-600">
+                                  <span>Ek Maliyetler</span>
+                                  <span className="font-bold tabular-nums">+{fmtTL(num(form.extraCosts))}</span>
+                                </div>
+                              )}
+                              {disc > 0 && (
+                                <div className="flex justify-between text-emerald-600">
+                                  <span>İndirim</span>
+                                  <span className="font-bold tabular-nums">-{fmtTL(disc)}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between text-slate-600">
+                                <span>KDV (%{form.vatRate || '0'})</span>
+                                <span className="font-bold tabular-nums">+{fmtTL(vat)}</span>
+                              </div>
+                              <div className="flex justify-between pt-1.5 border-t border-blue-200">
+                                <span className="font-black text-blue-800">Genel Toplam</span>
+                                <span className="font-black text-blue-700 tabular-nums">{fmtTL(total)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </Panel>
                 </div>
@@ -1520,7 +1712,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
 
                 {/* Adım göstergesi */}
                 <div className="hidden sm:flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider shrink-0">Adım {wizardStep}/5</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider shrink-0">Adım {wizardStep}/6</span>
                   <div className="flex gap-1">
                     {WIZARD_STEPS.map(s => (
                       <button
@@ -1534,7 +1726,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                   <span className="text-[10px] font-bold text-slate-500 truncate">{WIZARD_STEPS.find(s => s.key === wizardStep)?.label}</span>
                 </div>
 
-                {wizardStep < 5 ? (
+                {wizardStep < 6 ? (
                   <button
                     onClick={goNext}
                     className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-blue-200 active:scale-95"

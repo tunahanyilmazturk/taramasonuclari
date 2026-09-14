@@ -132,6 +132,12 @@ export interface Screening {
   notes?: string;
   coverLetter?: string;  // tarama ön yazısı
   terms?: string[];      // tarama şartları ve koşulları
+  // Maliyet & fiyatlandırma
+  perPersonPrice?: number;  // kişi başı fiyat (TL)
+  extraCosts?: number;       // ek maliyetler (seyahat, konaklama vb.)
+  discount?: number;          // indirim (TL)
+  vatRate?: number;          // KDV oranı (%)
+  costNotes?: string;        // maliyet notları
 }
 
 /** Teklif durum akışı: Taslak → Gönderildi → Onaylandı/Reddedildi */
