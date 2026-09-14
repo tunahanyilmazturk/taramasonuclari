@@ -746,7 +746,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                   <ClipboardList size={12} className="text-blue-500" /> Firma Test Şablonu · {detailCompany.tests.length} test
                 </span>
-                <button onClick={() => openEdit(detailCompany)} className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors">
+                <button onClick={openTemplateModal} className="flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors">
                   <Edit2 size={11} /> Düzenle
                 </button>
               </div>
@@ -755,7 +755,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
                   <ClipboardList size={28} className="mx-auto text-slate-200 mb-3" />
                   <p className="text-sm font-bold text-slate-600">Şablon tanımlanmamış</p>
                   <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Firma için varsayılan test seti tanımlanırsa tarama ve teklif oluştururken otomatik önerilir.</p>
-                  <button onClick={() => openEdit(detailCompany)} className="mt-4 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">Şablon Tanımla</button>
+                  <button onClick={openTemplateModal} className="mt-4 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors">Şablon Tanımla</button>
                 </div>
               ) : (
                 <div className="p-5 space-y-4">
