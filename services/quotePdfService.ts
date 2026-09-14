@@ -3,6 +3,7 @@ import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import type { Content, TDocumentDefinitions } from 'pdfmake/interfaces';
 import { Company, OrgInfo, Quote, QuoteStatus, QuoteType } from '../types';
 import { storageService } from './storageService';
+import { getImage } from './logoStorage';
 
 /**
  * TEKLİF PDF ÜRETİMİ
@@ -42,21 +43,41 @@ const slugify = (s: string) => s
   .replace(/[üÜ]/g, 'u')
   .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
-// Kurumsal renk paleti — uygulamadaki emerald/slate diliyle uyumlu
+// Kurumsal renk paleti — uygulamadaki mavi/slate diliyle uyumlu
 const C = {
-  primary: '#059669',      // emerald-600
-  primarySoft: '#ecfdf5',  // emerald-50
+  primary: '#2563eb',      // blue-600
+  primarySoft: '#eff6ff',  // blue-50
   ink: '#1e293b',          // slate-800
   muted: '#64748b',        // slate-500
   line: '#e2e8f0',         // slate-200
   softBg: '#f8fafc',       // slate-50
-  accent: '#0f766e'        // teal-700
+  accent: '#1d4ed8'        // blue-700
+};
+
+/** IndexedDB blob'unu pdfmake'in kullanabileceği dataURL'e çevirir */
+const blobToDataUrl = (blob: Blob): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result as string);
+  reader.onerror = () => reject(reader.error);
+  reader.readAsDataURL(blob);
+});
+
+/** Kurum görseli (logo/imza) — yoksa veya okunamazsa null döner, PDF metinle devam eder */
+const loadImageDataUrl = async (key?: string): Promise<string | null> => {
+  if (!key) return null;
+  const blob = await getImage(key);
+  if (!blob) return null;
+  try { return await blobToDataUrl(blob); } catch { return null; }
 };
 
 // ── Doküman tanımı üretici ──
 
-const buildQuoteDoc = (quote: Quote, company?: Company): TDocumentDefinitions => {
+const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocumentDefinitions> => {
   const org: OrgInfo = storageService.getOrgInfo();
+  const [logoDataUrl, signatureDataUrl] = await Promise.all([
+    loadImageDataUrl(org.logoKey),
+    loadImageDataUrl(org.signatureKey)
+  ]);
   const sub = quote.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const discount = quote.discountType === 'amount'
     ? Math.min(quote.discountRate, sub)
@@ -72,12 +93,14 @@ const buildQuoteDoc = (quote: Quote, company?: Company): TDocumentDefinitions =>
   // ── Başlık bandı: kurum kimliği | teklif kimliği ──
   content.push({
     columns: [
+      ...(logoDataUrl ? [{ width: 48 as const, image: logoDataUrl, fit: [44, 44] as [number, number] }] : []),
       {
         width: '*',
         stack: [
           { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
           ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
-        ]
+        ],
+        margin: logoDataUrl ? [10, 4, 0, 0] as [number, number, number, number] : [0, 0, 0, 0] as [number, number, number, number]
       },
       {
         width: 'auto',
@@ -144,7 +167,7 @@ const buildQuoteDoc = (quote: Quote, company?: Company): TDocumentDefinitions =>
         }]]
       },
       layout: {
-        fillColor: C.softBg,
+        fillColor: C.primarySoft,
         hLineWidth: () => 0, vLineWidth: () => 0,
         paddingLeft: () => 0, paddingRight: () => 0
       },
@@ -251,7 +274,10 @@ const buildQuoteDoc = (quote: Quote, company?: Company): TDocumentDefinitions =>
         stack: [
           { text: 'Saygılarımızla,', style: 'muted', alignment: 'right' },
           { text: org.name, style: 'signerOrg', alignment: 'right', margin: [0, 2, 0, 0] },
-          { text: org.signerName || ' ', style: 'signer', alignment: 'right', margin: [0, 22, 0, 0] },
+          ...(signatureDataUrl
+            ? [{ image: signatureDataUrl, fit: [90, 36] as [number, number], alignment: 'right' as const, margin: [0, 6, 0, 2] as [number, number, number, number] }]
+            : []),
+          { text: org.signerName || ' ', style: 'signer', alignment: 'right', margin: [0, signatureDataUrl ? 4 : 22, 0, 0] },
           { text: [org.signerTitle, trDate(quote.createdAt)].filter(Boolean).join(' · '), style: 'muted', alignment: 'right' }
         ]
       }
@@ -301,12 +327,12 @@ const buildQuoteDoc = (quote: Quote, company?: Company): TDocumentDefinitions =>
 // ── Dışa açık API ──
 
 /** PDF'i dosya olarak indirir */
-export const downloadQuotePdf = (quote: Quote, company?: Company) => {
+export const downloadQuotePdf = async (quote: Quote, company?: Company) => {
   const filename = `${quote.quoteNumber}${company ? `-${slugify(company.name)}` : ''}.pdf`;
-  pdfMake.createPdf(buildQuoteDoc(quote, company)).download(filename);
+  pdfMake.createPdf(await buildQuoteDoc(quote, company)).download(filename);
 };
 
 /** PDF'i yeni tarayıcı sekmesinde önizleme olarak açar */
-export const previewQuotePdf = (quote: Quote, company?: Company) => {
-  pdfMake.createPdf(buildQuoteDoc(quote, company)).open();
+export const previewQuotePdf = async (quote: Quote, company?: Company) => {
+  pdfMake.createPdf(await buildQuoteDoc(quote, company)).open();
 };
