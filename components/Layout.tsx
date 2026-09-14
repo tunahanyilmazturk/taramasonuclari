@@ -81,7 +81,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   const [searchFocused, setSearchFocused] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [now, setNow] = useState(() => new Date());
   const searchBoxRef = useRef<HTMLDivElement>(null);
 
   const isSuperAdmin = currentUser.role === 'super_admin';
@@ -95,12 +94,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   };
   const ThemeIcon = appearance.theme === 'dark' ? Moon : Sun;
   const themeLabel = appearance.theme === 'dark' ? 'Koyu' : 'Açık';
-
-  // Canlı saat — dakikada bir güncellenir
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Arama kutusu dışına tıklanınca kapat
   useEffect(() => {
@@ -452,16 +445,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                 )}
             </div>
 
-            {/* Saat + tarih */}
-            <div className="hidden xl:flex flex-col items-end leading-tight mr-1">
-                <span className="text-sm font-black text-slate-700 tabular-nums">
-                    {now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <span className="text-[10px] font-semibold text-slate-400 capitalize">
-                    {now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}
-                </span>
-            </div>
-
             {/* Tema değiştir */}
             <button
                 onClick={toggleTheme}
@@ -589,6 +572,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                     </>
                 )}
             </div>
+
+            {/* Hızlı çıkış */}
+            <button
+                onClick={onLogout}
+                className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all group"
+                title="Çıkış Yap"
+            >
+                <LogOut size={18} />
+            </button>
 
           </div>
         </header>
