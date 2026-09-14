@@ -552,23 +552,50 @@ const extractEk2Details = (text: string): import('../types').Ek2Details => {
     const cleaned = sectionLines.join('\n');
     const details: import('../types').Ek2Details = {};
 
+    // Form bölüm başlıkları ve tablo başlıkları — değer olarak kabul etme
+    const SECTION_HEADERS = [
+        'uluslararası', 'sınıflandırılması', 'için', 'hastalıkların',
+        'icd', 'tanı', 'tedavi', 'protokol', 'ek-2', 'ek 2', 'ek2',
+        'işe giriş', 'periyodik muayene', 'çalışanın', 'çalışanin',
+        'fizik muayene', 'laboratuvar', 'radyolojik', 'görüntüleme',
+        'aşı', 'aşılama', 'öykü', 'anamnez', 'şikayet', 'muayene bulguları',
+        'kanaat ve sonuç', 'kanaat ve sonuc', 'öneri', 'düzenlenme tarihi',
+        'hekim', 'imza', 'kaşe', 'tarih', 'sayfa'
+    ];
+    const isSectionHeader = (s: string): boolean => {
+        const n = normalizeTr(s.toLowerCase());
+        return SECTION_HEADERS.some(h => n.includes(h));
+    };
+
+    // İsim için ekstra doğrulama — en az 2 kelime, harf içermeli, bölüm başlığı olmamalı
+    const isValidName = (s: string): boolean => {
+        if (!s || s.length < 3 || s.length > 60) return false;
+        if (isSectionHeader(s)) return false;
+        // En az 2 harf içermeli ve sayılarla başlamamalı
+        if (/^\d/.test(s)) return false;
+        const words = s.split(/\s+/).filter(w => w.length > 0);
+        if (words.length < 2) return false;
+        // En az bir kelime tamamen harflerden oluşmalı
+        return words.some(w => /^[a-zA-ZçÇğĞıİöÖşŞüÜ]+$/.test(w));
+    };
+
     // Alan adı + değer eşleştirme — değer aynı satırda veya sonraki satırda
-    const findAfter = (pattern: RegExp): string | undefined => {
+    const findAfter = (pattern: RegExp, isValid?: (s: string) => boolean): string | undefined => {
         for (let i = 0; i < sectionLines.length; i++) {
             const m = sectionLines[i].match(pattern);
             if (m) {
                 const after = m[1]?.trim();
-                if (after && after.length > 1) return after;
+                if (after && after.length > 1 && (!isValid || isValid(after))) return after;
                 if (i + 1 < sectionLines.length) {
                     const next = sectionLines[i + 1].trim();
-                    if (next && next.length > 1 && !/^\d+[-.)]/.test(next)) return next;
+                    if (next && next.length > 1 && !/^\d+[-.)]/.test(next) && (!isValid || isValid(next))) return next;
                 }
             }
         }
         return undefined;
     };
 
-    details.name = findAfter(/ad[iıİ]\s+ve\s+soyad[iıİ]\s*[:=]?\s*(.+)/i);
+    details.name = findAfter(/ad[iıİ]\s+ve\s+soyad[iıİ]\s*[:=]?\s*(.+)/i, isValidName);
     details.birthInfo = findAfter(/do[gğ]um\s+yeri\s+ve\s+tarihi\s*[:=]?\s*(.+)/i);
     details.gender = findAfter(/cinsiyeti?\s*[:=]?\s*(.+)/i);
     details.phone = findAfter(/tel\s+no\s*[/\\]?\s*e-?posta\s*[:=]?\s*(.+)/i);
