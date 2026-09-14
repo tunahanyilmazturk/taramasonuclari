@@ -124,6 +124,7 @@ export interface Screening {
   location?: string;
   status: ScreeningStatus;
   testIds: string[];     // planlanan testler
+  testItems?: ScreeningTestItem[]; // test kalemleri (fiyat + miktar)
   plannedCount: number;  // planlanan çalışan sayısı
   completedCount: number;// işlemi tamamlanan
   teamMemberIds: string[];
@@ -138,6 +139,14 @@ export interface Screening {
   discount?: number;          // indirim (TL)
   vatRate?: number;          // KDV oranı (%)
   costNotes?: string;        // maliyet notları
+}
+
+/** Tarama test kalemi — teklif kalemi gibi fiyat + miktar */
+export interface ScreeningTestItem {
+  testId: string;
+  name: string;
+  quantity: number;    // kişi / adet
+  unitPrice: number;   // birim fiyat (TL)
 }
 
 /** Teklif durum akışı: Taslak → Gönderildi → Onaylandı/Reddedildi */

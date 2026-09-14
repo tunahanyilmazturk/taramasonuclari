@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Company, Screening, ScreeningStatus, TestDefinition } from '../../types';
+import { Company, Screening, ScreeningStatus, ScreeningTestItem, TestDefinition } from '../../types';
 import { storageService } from '../../services/storageService';
-import { testCategory } from '../../constants';
+import { testCategory, testPrice } from '../../constants';
 import { ConfirmModal } from '../ConfirmModal';
 import { Modal, modalPanel } from '../Modal';
 import { usePagination } from '../../hooks/usePagination';
@@ -38,13 +38,13 @@ const buildScreeningTitle = (companyName: string | undefined, type: 'ise_giris' 
 };
 
 /** Tarama ön yazısı — firma + tür + tarih bilgisinden otomatik üretilir */
-const buildScreeningCoverLetter = (form: { companyId: string; screeningType: 'ise_giris' | 'periyodik'; date: string; endDate: string; startTime: string; endTime: string; testIds: Set<string>; plannedCount: string }, company: Company | undefined): string => {
+const buildScreeningCoverLetter = (form: { companyId: string; screeningType: 'ise_giris' | 'periyodik'; date: string; endDate: string; startTime: string; endTime: string; testItems: ScreeningTestItem[]; plannedCount: string }, company: Company | undefined): string => {
   if (!company) return '';
   const typeLabel = screeningTypeLabel(form.screeningType) ?? 'Tarama';
   const dateStr = new Date(form.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
   const endDateStr = form.endDate ? ` - ${new Date(form.endDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}` : '';
   const timeStr = form.startTime && form.endTime ? ` (${form.startTime}-${form.endTime})` : '';
-  const testCount = form.testIds.size;
+  const testCount = form.testItems.length;
   const personCount = form.plannedCount || '0';
 
   return `Sayın ${company.contactPerson || 'İlgili'},
@@ -111,11 +111,11 @@ const WIZARD_STEPS = [
 
 /** Maliyet hesaplama yardımcıları */
 const num = (v: string) => parseFloat(v) || 0;
-const calcSubtotal = (perPerson: string, count: string, extra: string) => num(perPerson) * num(count) + num(extra);
+const testItemsSubtotal = (items: ScreeningTestItem[]) => items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 const calcDiscount = (subtotal: number, discount: string) => Math.max(0, Math.min(subtotal, num(discount)));
 const calcVat = (afterDiscount: number, vatRate: string) => afterDiscount * (num(vatRate) / 100);
-const calcTotal = (perPerson: string, count: string, extra: string, discount: string, vatRate: string) => {
-  const sub = calcSubtotal(perPerson, count, extra);
+const calcTotal = (items: ScreeningTestItem[], extra: string, discount: string, vatRate: string) => {
+  const sub = testItemsSubtotal(items) + num(extra);
   const disc = calcDiscount(sub, discount);
   const vat = calcVat(sub - disc, vatRate);
   return { sub, disc, vat, total: sub - disc + vat };
@@ -133,7 +133,7 @@ interface ScreeningForm {
   status: ScreeningStatus;
   plannedCount: string;
   completedCount: string;
-  testIds: Set<string>;
+  testItems: ScreeningTestItem[]; // test kalemleri (fiyat + miktar)
   titleTouched: boolean;
   coverLetter: string;
   coverLetterEdited: boolean;
@@ -157,7 +157,7 @@ const emptyForm = (): ScreeningForm => ({
   status: 'planlandi',
   plannedCount: '',
   completedCount: '0',
-  testIds: new Set(),
+  testItems: [],
   titleTouched: false,
   coverLetter: '',
   coverLetterEdited: false,
@@ -305,12 +305,12 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
   // ── Sihirbaz taslağını localStorage'a sürekli yaz — sayfa yenilense bile form korunur
   useEffect(() => {
     if (view === 'wizard') {
-      storageService.saveScreeningDraft({ form: { ...form, testIds: [...form.testIds] }, wizardStep, editingId });
+      storageService.saveScreeningDraft({ form, wizardStep, editingId });
     }
   }, [view, form, wizardStep, editingId]);
 
   const openCreate = (presetCompanyId?: string) => {
-    const draft = storageService.getScreeningDraft<{ form: Omit<ScreeningForm, 'testIds'> & { testIds: string[] }; wizardStep: number; editingId: string | null }>();
+    const draft = storageService.getScreeningDraft<{ form: ScreeningForm; wizardStep: number; editingId: string | null }>();
     if (draft?.form && !presetCompanyId) {
       const f = draft.form as unknown as Partial<ScreeningForm>;
       setForm({
@@ -324,7 +324,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
         status: f.status ?? 'planlandi',
         plannedCount: f.plannedCount ?? '',
         completedCount: f.completedCount ?? '0',
-        testIds: new Set(f.testIds ?? []),
+        testItems: f.testItems ?? [],
         titleTouched: f.titleTouched ?? false,
         coverLetter: f.coverLetter ?? '',
         coverLetterEdited: f.coverLetterEdited ?? false,
@@ -396,7 +396,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
       status: s.status,
       plannedCount: String(s.plannedCount ?? ''),
       completedCount: String(s.completedCount ?? 0),
-      testIds: new Set(s.testIds),
+      testItems: s.testItems ?? s.testIds.map(id => { const t = allTests.find(x => x.id === id); return { testId: id, name: t?.name ?? '', quantity: s.plannedCount || 1, unitPrice: t ? testPrice(t) : 0 }; }),
       titleTouched: true,
       coverLetter: s.coverLetter ?? '',
       coverLetterEdited: !!s.coverLetter,
@@ -422,7 +422,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
       companyId,
       title: prev.titleTouched ? prev.title : buildScreeningTitle(company?.name, prev.screeningType),
       plannedCount: prev.plannedCount || (company?.employeeCount ? String(company.employeeCount) : ''),
-      testIds: company && company.tests.length > 0 ? new Set(company.tests.map(t => t.id)) : prev.testIds
+      testItems: company && company.tests.length > 0 ? company.tests.map(t => ({ testId: t.id, name: t.name, quantity: company.employeeCount ?? 1, unitPrice: testPrice(t) })) : prev.testItems
     }));
   };
 
@@ -437,7 +437,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
 
   const applyCompanyTemplate = () => {
     if (!formCompany) return;
-    setForm(prev => ({ ...prev, testIds: new Set(formCompany.tests.map(t => t.id)) }));
+    setForm(prev => ({ ...prev, testItems: formCompany.tests.map(t => ({ testId: t.id, name: t.name, quantity: parseInt(prev.plannedCount) || 1, unitPrice: testPrice(t) })) }));
   };
 
   // ── Ön yazı işlemleri ──
@@ -465,24 +465,30 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
 
   const toggleTest = (id: string) => {
     setForm(prev => {
-      const next = new Set(prev.testIds);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return { ...prev, testIds: next };
+      if (prev.testItems.some(i => i.testId === id)) {
+        return { ...prev, testItems: prev.testItems.filter(i => i.testId !== id) };
+      }
+      const t = allTests.find(x => x.id === id);
+      return { ...prev, testItems: [...prev.testItems, { testId: id, name: t?.name ?? '', quantity: parseInt(prev.plannedCount) || 1, unitPrice: t ? testPrice(t) : 0 }] };
     });
+  };
+
+  const updateTestItem = (testId: string, patch: Partial<ScreeningTestItem>) => {
+    setForm(prev => ({ ...prev, testItems: prev.testItems.map(i => i.testId === testId ? { ...i, ...patch } : i) }));
   };
 
   const canProceed = (): boolean => {
     if (wizardStep === 1) return !!form.companyId && !!form.title.trim() && !!form.date;
-    if (wizardStep === 2) return form.testIds.size > 0;
+    if (wizardStep === 2) return form.testItems.length > 0;
     return true; // adım 3, 4, 5, 6 opsiyonel
   };
 
   const stepDone = (key: number): boolean => {
     if (key === 1) return !!form.companyId && !!form.title.trim() && !!form.date;
-    if (key === 2) return form.testIds.size > 0;
+    if (key === 2) return form.testItems.length > 0;
     if (key === 3) return form.coverLetter.trim().length > 0;
     if (key === 4) return form.terms.length > 0;
-    if (key === 5) return parseFloat(form.perPersonPrice) > 0;
+    if (key === 5) return testItemsSubtotal(form.testItems) > 0;
     return false;
   };
 
@@ -507,7 +513,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
     if (!form.companyId) { setFormError('Firma seçimi zorunludur.'); return; }
     if (!form.title.trim()) { setFormError('Tarama başlığı zorunludur.'); return; }
     if (!form.date) { setFormError('Tarih zorunludur.'); return; }
-    if (form.testIds.size === 0) { setFormError('En az bir test seçmelisiniz.'); return; }
+    if (form.testItems.length === 0) { setFormError('En az bir test seçmelisiniz.'); return; }
 
     const base = {
       companyId: form.companyId,
@@ -518,7 +524,8 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
       startTime: form.startTime || undefined,
       endTime: form.endTime || undefined,
       status: form.status,
-      testIds: [...form.testIds],
+      testIds: form.testItems.map(i => i.testId),
+      testItems: form.testItems,
       plannedCount: Math.max(0, parseInt(form.plannedCount) || 0),
       completedCount: Math.max(0, parseInt(form.completedCount) || 0),
       coverLetter: form.coverLetter.trim() || undefined,
@@ -582,7 +589,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
   const inputCls = "w-full text-sm border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none p-2.5 transition-all placeholder-slate-400";
   const labelCls = "block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide";
 
-  const selectedTests = allTests.filter(t => form.testIds.has(t.id));
+  const selectedTests = allTests.filter(t => form.testItems.some(i => i.testId === t.id));
 
   return (
     <div className="space-y-6 pb-16 animate-in fade-in duration-300">
@@ -897,10 +904,10 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                 <div className="flex justify-between text-slate-300"><span>Tür</span><span className="font-bold text-white truncate max-w-[140px]">{screeningTypeLabel(form.screeningType) || '—'}</span></div>
                 <div className="flex justify-between text-slate-300"><span>Tarih</span><span className="font-bold text-white">{form.date || '—'}</span></div>
                 <div className="flex justify-between text-slate-300"><span>Saat</span><span className="font-bold text-white">{form.startTime} - {form.endTime}</span></div>
-                <div className="flex justify-between text-slate-300"><span>Test</span><span className="font-bold text-white">{form.testIds.size}</span></div>
+                <div className="flex justify-between text-slate-300"><span>Test</span><span className="font-bold text-white">{form.testItems.length}</span></div>
                 <div className="flex justify-between text-slate-300"><span>Kişi</span><span className="font-bold text-white">{form.plannedCount || '—'}</span></div>
-                {num(form.perPersonPrice) > 0 && (() => {
-                  const { total } = calcTotal(form.perPersonPrice, form.plannedCount, form.extraCosts, form.discount, form.vatRate);
+                {testItemsSubtotal(form.testItems) > 0 && (() => {
+                  const { total } = calcTotal(form.testItems, form.extraCosts, form.discount, form.vatRate);
                   return <div className="flex justify-between text-blue-400 pt-1.5 border-t border-slate-700"><span>Toplam</span><span className="font-bold text-white tabular-nums">{fmtTL(total)}</span></div>;
                 })()}
               </div>
@@ -1103,10 +1110,10 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                           <span className="w-px h-4 bg-slate-200 shrink-0 mx-0.5" />
                         </>
                       )}
-                      {form.testIds.size > 0 && (
+                      {form.testItems.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setForm(prev => ({ ...prev, testIds: new Set() }))}
+                          onClick={() => setForm(prev => ({ ...prev, testItems: [] }))}
                           className="shrink-0 px-2.5 py-1 text-[10px] font-bold text-slate-500 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors"
                         >
                           Tümünü Temizle
@@ -1125,20 +1132,23 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                               <button
                                 type="button"
                                 onClick={() => setForm(prev => {
-                                  const next = new Set(prev.testIds);
-                                  const allIn = catTests.every(t => next.has(t.id));
-                                  catTests.forEach(t => { if (allIn) next.delete(t.id); else next.add(t.id); });
-                                  return { ...prev, testIds: next };
+                                  const allIn = catTests.every(t => prev.testItems.some(i => i.testId === t.id));
+                                  const existing = new Set(prev.testItems.map(i => i.testId));
+                                  if (allIn) {
+                                    return { ...prev, testItems: prev.testItems.filter(i => !catTests.some(t => t.id === i.testId)) };
+                                  }
+                                  const toAdd = catTests.filter(t => !existing.has(t.id)).map(t => ({ testId: t.id, name: t.name, quantity: parseInt(prev.plannedCount) || 1, unitPrice: testPrice(t) }));
+                                  return { ...prev, testItems: [...prev.testItems, ...toAdd] };
                                 })}
                                 className="text-[9px] font-bold text-blue-600 hover:text-blue-700"
                               >
-                                {catTests.every(t => form.testIds.has(t.id)) ? 'Kaldır' : 'Tümünü Ekle'}
+                                {catTests.every(t => form.testItems.some(i => i.testId === t.id)) ? 'Kaldır' : 'Tümünü Ekle'}
                               </button>
                             </div>
                           </div>
                           <div className="p-2 space-y-1">
                             {catTests.map(t => {
-                              const sel = form.testIds.has(t.id);
+                              const sel = form.testItems.some(i => i.testId === t.id);
                               const inTemplate = formCompany?.tests.some(ct => ct.id === t.id);
                               return (
                                 <button
@@ -1165,16 +1175,16 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                     </div>
                   </Panel>
 
-                  {/* ── SAĞ: SEÇİLİ TESTLER ── */}
+                  {/* ── SAĞ: SEÇİLİ TESTLER (FİYAT & MİKTAR) ── */}
                   <Panel
-                    icon={CheckCircle2}
-                    title="Seçili Testler"
+                    icon={Calculator}
+                    title="Seçili Testler & Fiyatlandırma"
                     bodyClassName="p-0 flex flex-col"
                     right={
-                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{form.testIds.size} test</span>
+                      <span className="text-[10px] font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{form.testItems.length} test</span>
                     }
                   >
-                    {selectedTests.length === 0 ? (
+                    {form.testItems.length === 0 ? (
                       <div className="p-8 text-center">
                         <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                           <FlaskConical size={22} className="text-slate-300" />
@@ -1184,54 +1194,75 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                       </div>
                     ) : (
                       <>
-                        {/* Kategori gruplu seçili testler */}
-                        <div className="max-h-[460px] overflow-y-auto divide-y divide-slate-100">
-                          {(() => {
-                            const byCat = new Map<string, TestDefinition[]>();
-                            selectedTests.forEach(t => {
-                              const cat = testCategory(t);
-                              if (!byCat.has(cat)) byCat.set(cat, []);
-                              byCat.get(cat)!.push(t);
-                            });
-                            return [...byCat.entries()].map(([cat, tests]) => (
-                              <div key={cat} className="py-2">
-                                <div className="px-3 py-1.5 flex items-center justify-between">
-                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{cat}</span>
-                                  <span className="text-[9px] font-bold text-slate-400">{tests.length}</span>
-                                </div>
-                                <div className="px-2 space-y-1">
-                                  {tests.map(t => (
-                                    <div
-                                      key={t.id}
-                                      className="flex items-center gap-2 px-2 py-2 rounded-lg bg-blue-50/40 border border-blue-100 group"
-                                    >
-                                      <FlaskConical size={12} className="text-blue-500 shrink-0" />
-                                      <span className="text-[11px] font-medium text-slate-700 truncate flex-1">{t.name}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleTest(t.id)}
-                                        className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                                        title="Kaldır"
-                                      >
-                                        <X size={12} />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ));
-                          })()}
+                        {/* Kolon başlıkları */}
+                        <div className="hidden sm:grid grid-cols-12 gap-1.5 px-3 py-2 border-b border-slate-100 bg-slate-50/70">
+                          <div className="col-span-5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">Test Adı</div>
+                          <div className="col-span-2 text-center text-[9px] font-bold text-slate-400 uppercase tracking-wider">Miktar</div>
+                          <div className="col-span-2 text-right text-[9px] font-bold text-slate-400 uppercase tracking-wider">Birim ₺</div>
+                          <div className="col-span-2 text-right text-[9px] font-bold text-slate-400 uppercase tracking-wider">Tutar</div>
+                          <div className="col-span-1" />
                         </div>
-                        {/* Alt özet */}
-                        <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between">
-                          <span className="text-[10px] font-bold text-slate-500">Toplam {selectedTests.length} test seçili</span>
-                          <button
-                            type="button"
-                            onClick={() => setForm(prev => ({ ...prev, testIds: new Set() }))}
-                            className="text-[10px] font-bold text-red-500 hover:text-red-600"
-                          >
-                            Tümünü Temizle
-                          </button>
+                        {/* Test kalemleri */}
+                        <div className="max-h-[400px] overflow-y-auto divide-y divide-slate-100">
+                          {form.testItems.map(item => (
+                            <div key={item.testId} className="grid grid-cols-12 gap-1.5 items-center px-3 py-2 bg-white hover:bg-slate-50/50 transition-colors">
+                              <div className="col-span-12 sm:col-span-5 flex items-center gap-1.5 min-w-0">
+                                <FlaskConical size={11} className="text-blue-500 shrink-0" />
+                                <span className="text-[11px] font-medium text-slate-700 truncate">{item.name}</span>
+                              </div>
+                              <div className="col-span-4 sm:col-span-2">
+                                <span className="sm:hidden block text-[8px] font-bold text-slate-400 uppercase mb-0.5 text-center">Miktar</span>
+                                <input
+                                  type="number" min={1}
+                                  value={item.quantity}
+                                  onChange={(e) => updateTestItem(item.testId, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+                                  className="w-full text-[11px] border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-400 outline-none px-2 py-1.5 text-center transition-all"
+                                  title="Kişi / Adet"
+                                />
+                              </div>
+                              <div className="col-span-4 sm:col-span-2">
+                                <span className="sm:hidden block text-[8px] font-bold text-slate-400 uppercase mb-0.5 text-right">Birim ₺</span>
+                                <input
+                                  type="number" min={0} step={0.01}
+                                  value={item.unitPrice || ''}
+                                  onChange={(e) => updateTestItem(item.testId, { unitPrice: Math.max(0, parseFloat(e.target.value) || 0) })}
+                                  className={`w-full text-[11px] border rounded-lg bg-slate-50 focus:bg-white focus:ring-2 outline-none px-2 py-1.5 text-right transition-all ${item.unitPrice <= 0 ? 'border-amber-300 focus:ring-amber-100 focus:border-amber-400' : 'border-slate-200 focus:ring-blue-100 focus:border-blue-400'}`}
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div className="col-span-3 sm:col-span-2 text-right">
+                                <span className="sm:hidden block text-[8px] font-bold text-slate-400 uppercase mb-0.5">Tutar</span>
+                                <span className="text-[11px] font-black text-slate-700 tabular-nums">{fmtTL(item.quantity * item.unitPrice)}</span>
+                              </div>
+                              <div className="col-span-1 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleTest(item.testId)}
+                                  className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                  title="Kaldır"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {/* Alt özet — toplam tutar */}
+                        <div className="px-3 py-2.5 border-t border-slate-100 bg-slate-50/70 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-500">{form.testItems.length} test · {form.testItems.reduce((s, i) => s + i.quantity, 0)} adet</span>
+                            <button
+                              type="button"
+                              onClick={() => setForm(prev => ({ ...prev, testItems: [] }))}
+                              className="text-[10px] font-bold text-red-500 hover:text-red-600"
+                            >
+                              Tümünü Temizle
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between pt-1.5 border-t border-slate-200">
+                            <span className="text-xs font-black text-slate-700">Testler Ara Toplam</span>
+                            <span className="text-sm font-black text-blue-700 tabular-nums">{fmtTL(form.testItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0))}</span>
+                          </div>
                         </div>
                       </>
                     )}
@@ -1252,7 +1283,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                     {formCompany?.name && <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md px-2 py-0.5">{formCompany.name}</span>}
                     {formCompany?.contactPerson && <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md px-2 py-0.5">{formCompany.contactPerson}</span>}
                     <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md px-2 py-0.5">{screeningTypeLabel(form.screeningType)}</span>
-                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md px-2 py-0.5">{form.testIds.size} test</span>
+                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md px-2 py-0.5">{form.testItems.length} test</span>
                     <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md px-2 py-0.5">{form.plannedCount || '0'} kişi</span>
                   </div>
 
@@ -1475,21 +1506,25 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
 
                 <div className="max-w-3xl mx-auto space-y-5">
                   <Panel icon={Calculator} title="Fiyatlandırma" bodyClassName="p-5 space-y-5">
-                    {/* Kişi başı fiyat + kişi sayısı */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className={labelCls}><Users size={10} className="inline mr-1"/>Kişi Başı Fiyat (TL)</label>
-                        <div className="relative">
-                          <input type="number" min="0" step="0.01" value={form.perPersonPrice} onChange={(e) => setForm(prev => ({ ...prev, perPersonPrice: e.target.value }))} className={inputCls} placeholder="0.00" />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">TL</span>
+                    {/* Test kalemleri özeti — 2. adımdan gelir */}
+                    <div>
+                      <label className={labelCls}><FlaskConical size={10} className="inline mr-1"/>Test Kalemleri Toplamı</label>
+                      <div className="bg-blue-50/40 border border-blue-100 rounded-xl p-3.5">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-black text-blue-700 tabular-nums">{fmtTL(testItemsSubtotal(form.testItems))}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{form.testItems.length} test · {form.testItems.reduce((s, i) => s + i.quantity, 0)} adet</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => goToStep(2)}
+                            className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                          >
+                            <ArrowLeft size={10}/> Test Adımına Dön
+                          </button>
                         </div>
-                        <p className="text-[10px] text-slate-400 mt-1.5">Personel başı alınacak ücret</p>
                       </div>
-                      <div>
-                        <label className={labelCls}><Users size={10} className="inline mr-1"/>Planlanan Kişi</label>
-                        <input type="number" min="0" value={form.plannedCount} onChange={(e) => setForm(prev => ({ ...prev, plannedCount: e.target.value }))} className={inputCls} placeholder="0" />
-                        <p className="text-[10px] text-slate-400 mt-1.5">1. adımdan otomatik gelir</p>
-                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1.5">Fiyatlar 2. adımdaki test kalemlerinden gelir</p>
                     </div>
 
                     {/* Ek maliyetler + indirim */}
@@ -1532,13 +1567,13 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                   {/* Canlı maliyet hesaplama kartı */}
                   <Panel icon={Calculator} title="Maliyet Hesabı" bodyClassName="p-5">
                     {(() => {
-                      const { sub, disc, vat, total } = calcTotal(form.perPersonPrice, form.plannedCount, form.extraCosts, form.discount, form.vatRate);
-                      const personTotal = num(form.perPersonPrice) * num(form.plannedCount);
+                      const { sub, disc, vat, total } = calcTotal(form.testItems, form.extraCosts, form.discount, form.vatRate);
+                      const testsTotal = testItemsSubtotal(form.testItems);
                       return (
                         <div className="space-y-2.5">
                           <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100">
-                            <span className="text-slate-500 flex items-center gap-1.5"><Users size={12}/> Kişi Başı × Kişi Sayısı</span>
-                            <span className="font-bold text-slate-700 tabular-nums">{fmtTL(personTotal)}</span>
+                            <span className="text-slate-500 flex items-center gap-1.5"><FlaskConical size={12}/> Test Kalemleri</span>
+                            <span className="font-bold text-slate-700 tabular-nums">{fmtTL(testsTotal)}</span>
                           </div>
                           {num(form.extraCosts) > 0 && (
                             <div className="flex justify-between items-center text-xs py-2 border-b border-slate-100">
@@ -1564,7 +1599,7 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                             <span className="font-black text-blue-800">Genel Toplam</span>
                             <span className="font-black text-blue-700 tabular-nums text-lg">{fmtTL(total)}</span>
                           </div>
-                          {num(form.plannedCount) > 0 && num(form.perPersonPrice) > 0 && (
+                          {num(form.plannedCount) > 0 && (
                             <p className="text-[10px] text-slate-400 text-center pt-1">
                               Kişi başı net maliyet: <span className="font-bold text-slate-600">{fmtTL(total / num(form.plannedCount))}</span>
                             </p>
@@ -1658,8 +1693,8 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                       )}
 
                       {/* Maliyet özeti */}
-                      {(parseFloat(form.perPersonPrice) > 0 || parseFloat(form.extraCosts) > 0) && (() => {
-                        const { disc, vat, total } = calcTotal(form.perPersonPrice, form.plannedCount, form.extraCosts, form.discount, form.vatRate);
+                      {(testItemsSubtotal(form.testItems) > 0 || parseFloat(form.extraCosts) > 0) && (() => {
+                        const { disc, vat, total } = calcTotal(form.testItems, form.extraCosts, form.discount, form.vatRate);
                         return (
                           <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
@@ -1667,8 +1702,8 @@ export const Screenings: React.FC<ScreeningsProps> = ({ companies, allTests, ini
                             </p>
                             <div className="bg-blue-50/30 border border-blue-100 rounded-xl p-3 space-y-1.5 text-xs">
                               <div className="flex justify-between text-slate-600">
-                                <span>Kişi Başı × {form.plannedCount || '0'} kişi</span>
-                                <span className="font-bold tabular-nums">{fmtTL(num(form.perPersonPrice) * num(form.plannedCount))}</span>
+                                <span>Test Kalemleri ({form.testItems.length} kalem)</span>
+                                <span className="font-bold tabular-nums">{fmtTL(testItemsSubtotal(form.testItems))}</span>
                               </div>
                               {num(form.extraCosts) > 0 && (
                                 <div className="flex justify-between text-slate-600">
