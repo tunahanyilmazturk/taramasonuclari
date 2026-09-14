@@ -224,7 +224,13 @@ const buildAliases = (test: TestDefinition): string[] => {
         'tit_lokosit': ['lökosit (kimyasal)', 'lökosit', 'idrar lökosit', 'leukocyte'],
         'tit_mikroskopi': ['idrar mikroskopi', 'idrar mikroskopisi', 'mikroskopi', 'sediment'],
         'pnomokonyoz_1': ['pnmokonyoz', 'pnömokonyoz', 'pnomokonyoz', 'ilo', 'radyografi okuma', 'dier yorumlar', 'diğer yorumlar', '4d', '4d. diğer yorumlar'],
-        'pnomokonyoz_2': ['pnmokonyoz', 'pnömokonyoz', 'pnomokonyoz', 'ilo', 'radyografi okuma', 'dier yorumlar', 'diğer yorumlar', '4d', '4d. diğer yorumlar']
+        'pnomokonyoz_2': ['pnmokonyoz', 'pnömokonyoz', 'pnomokonyoz', 'ilo', 'radyografi okuma', 'dier yorumlar', 'diğer yorumlar', '4d', '4d. diğer yorumlar'],
+        // Servikal Grafi — radyoloji raporu
+        'servikal_grafi': ['servikal grafi', 'servikal vertebra grafi', 'servikal', 'cervical', 'iki yönlü servikal', 'servikal vertebra'],
+        // Lumbosakral Grafi — radyoloji raporu
+        'lumbosakral_grafi': ['lumbosakral grafi', 'lumbosakral', 'lumbar', 'iki yönlü lumbosakral', 'lumbosakral vertebra', 'lomber'],
+        // Ek-2 Belgesi
+        'ek_2_belgesi': ['ek-2', 'ek 2 belgesi', 'ek-2 belgesi', 'ek2']
     };
 
     const testKeyLower = normalizeTr(test.key);
@@ -432,6 +438,34 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
         if (pathMatch) return `Bulgu: ${pathMatch[0]}`;
     }
 
+    // Servikal Grafi — radyoloji raporu
+    if (test.key.includes('servikal')) {
+        if (includesTr(norm, 'normal') || includesTr(norm, 'tabii') || includesTr(norm, 'doğaldır') ||
+            includesTr(norm, 'patoloji izlenmedi') || includesTr(norm, 'normal sınırlarda') ||
+            includesTr(norm, 'sağlam') || includesTr(norm, 'normaldir')) {
+            return 'Normal Servikal Vertebra Grafisi';
+        }
+        const pathMatch = cleaned.match(/(skolyoz|lordoz|kifoz|deformite|daralma|dejeneratif|herniasyon|kemik lezyonu|osteopeni|osteoporoz)/i);
+        if (pathMatch) return `Bulgu: ${pathMatch[0]}`;
+    }
+
+    // Lumbosakral Grafi — radyoloji raporu
+    if (test.key.includes('lumbosakral') || test.key.includes('lumbar') || test.key.includes('lomber')) {
+        if (includesTr(norm, 'normal') || includesTr(norm, 'tabii') || includesTr(norm, 'doğaldır') ||
+            includesTr(norm, 'patoloji izlenmedi') || includesTr(norm, 'normal sınırlarda') ||
+            includesTr(norm, 'sağlam') || includesTr(norm, 'normaldir')) {
+            return 'Normal Lumbosakral Vertebra Grafisi';
+        }
+        const pathMatch = cleaned.match(/(skolyoz|lordoz|kifoz|deformite|daralma|dejeneratif|herniasyon|kemik lezyonu|osteopeni|osteoporoz|kompresyon)/i);
+        if (pathMatch) return `Bulgu: ${pathMatch[0]}`;
+    }
+
+    // Ek-2 Belgesi — henüz taranmıyor, açık bırakıldı
+    if (test.key.includes('ek_2')) {
+        // Ek-2 belgesi manuel olarak taranacak — otomatik çıkarım yok
+        return undefined;
+    }
+
     // SFT
     if (test.key.includes('sft') || test.key.includes('solunum')) {
         if (includesTr(norm, 'normal spirometri') || includesTr(norm, 'normal') ||
@@ -496,7 +530,8 @@ export const analyzeMedicalTextLocal = (
             test.key.includes('odyo') || test.key.includes('akciger') || test.key.includes('thorax') ||
             test.key.includes('sft') || test.key.includes('solunum') || test.key.includes('kulturu') ||
             test.key.includes('gaita') || test.key.includes('tetanoz') || test.key.includes('kan_grubu') ||
-            test.key.includes('pnomokonyoz')
+            test.key.includes('pnomokonyoz') || test.key.includes('servikal') || test.key.includes('lumbosakral') ||
+            test.key.includes('ek_2')
         );
 
         let found = false;

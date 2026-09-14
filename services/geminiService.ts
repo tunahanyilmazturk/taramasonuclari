@@ -168,6 +168,26 @@ const analyzeMedicalTextGemini = async (
         - If there is a pathology (e.g., "İnfiltrasyon", "Nodül", "Kalsifikasyon", "Kalp büyük"), return the detailed finding.`;
     }
 
+    if (t.key.includes('servikal')) {
+        return `- "${t.name}": Analyze Cervical X-Ray/Servikal Grafi.
+        STANDARDIZATION RULE:
+        - If the result implies normal vertebrae (e.g., "Normal", "Tabii", "Doğaldır", "Patoloji izlenmedi", "Normal Sınırlarda"), return EXACTLY: "Normal Servikal Vertebra Grafisi".
+        - If there is a pathology (e.g., "Skolyoz", "Lordoz", "Deformite", "Dejeneratif", "Herniasyon"), return the detailed finding.`;
+    }
+
+    if (t.key.includes('lumbosakral') || t.key.includes('lumbar') || t.key.includes('lomber')) {
+        return `- "${t.name}": Analyze Lumbosacral X-Ray/Lumbosakral Grafi.
+        STANDARDIZATION RULE:
+        - If the result implies normal vertebrae (e.g., "Normal", "Tabii", "Doğaldır", "Patoloji izlenmedi", "Normal Sınırlarda"), return EXACTLY: "Normal Lumbosakral Vertebra Grafisi".
+        - If there is a pathology (e.g., "Skolyoz", "Lordoz", "Deformite", "Kompresyon", "Dejeneratif"), return the detailed finding.`;
+    }
+
+    if (t.key.includes('ek_2')) {
+        return `- "${t.name}": Analyze Ek-2 Belgesi (Ek-2 Document).
+        STANDARDIZATION RULE:
+        - This document is not yet supported for automated extraction. Return "Belge taranacak".`;
+    }
+
     if (t.key.includes('sft') || t.key.includes('solunum')) {
         return `- "${t.name}": Analyze the Pulmonary Function Test (SFT/Spirometry) section.
         Look for the 'Yorum', 'Sonuç', 'Tıbbi Rapor' or 'Değerlendirme' lines.

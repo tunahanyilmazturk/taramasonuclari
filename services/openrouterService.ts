@@ -144,6 +144,15 @@ export const analyzeMedicalTextOpenRouter = async (
         if (t.key.includes('akciger') || t.key.includes('thorax') || t.key.includes('pa_')) {
             return `- "${t.name}": Analyze Chest X-Ray. If normal, return "Normal PA Akciğer Grafisi". If pathology, return detailed finding.`;
         }
+        if (t.key.includes('servikal')) {
+            return `- "${t.name}": Analyze Cervical X-Ray. If normal, return "Normal Servikal Vertebra Grafisi". If pathology, return detailed finding.`;
+        }
+        if (t.key.includes('lumbosakral') || t.key.includes('lumbar') || t.key.includes('lomber')) {
+            return `- "${t.name}": Analyze Lumbosacral X-Ray. If normal, return "Normal Lumbosakral Vertebra Grafisi". If pathology, return detailed finding.`;
+        }
+        if (t.key.includes('ek_2')) {
+            return `- "${t.name}": Ek-2 Belgesi. Not yet supported for automated extraction. Return "Belge taranacak".`;
+        }
         if (t.key.includes('sft') || t.key.includes('solunum')) {
             return `- "${t.name}": Analyze SFT/Spirometry. If normal, return "Normal Spirometri". If pathology, return summary.`;
         }
