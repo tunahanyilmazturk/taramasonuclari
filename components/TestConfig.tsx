@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { TestDefinition, TestType } from '../types';
 import { ConfirmModal } from './ConfirmModal';
-import { 
-  Trash2, Plus, Save, ChevronRight, ChevronDown, FolderTree, 
+import {
+  Trash2, Plus, Save, ChevronRight, ChevronDown, FolderTree,
   Search, ArrowUp, ArrowDown, AlignLeft, Copy, RotateCcw, LayoutList, Layers, Hash, AlertTriangle,
-  Download, Upload, Zap
+  Download, Upload, Zap, X
 } from 'lucide-react';
 import { DEFAULT_TESTS, TEST_DEFAULT_PRICES, TEST_CATEGORIES, testCategory } from '../constants';
 
@@ -80,31 +80,24 @@ const TestRow: React.FC<TestRowProps> = ({
                                 className={`bg-transparent border-none p-0 focus:ring-0 w-full transition-all text-sm outline-none ${hasSubTests ? 'font-bold text-slate-800' : 'font-medium text-slate-700'}`}
                                 placeholder="Test Adı"
                             />
-                            <div className="flex items-center gap-2">
-                                <div className="text-[10px] text-slate-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
-                                    #{test.key}
-                                </div>
-                                {depth === 0 && (
-                                    <select
-                                        value={testCategory(test)}
-                                        onChange={(e) => onUpdateField(test.id, 'category', e.target.value)}
-                                        title="Kategori — teklifte testleri gruplu seçmeyi sağlar"
-                                        className="text-[10px] font-bold text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-blue-200 cursor-pointer"
-                                    >
-                                        {TEST_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                                    </select>
-                                )}
+                            <div className="text-[10px] text-slate-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                                #{test.key}
                             </div>
                         </div>
                     </div>
                 </td>
 
-                {/* CATEGORY COLUMN — sadece root testlerde gösterilir */}
+                {/* CATEGORY COLUMN — sadece root testlerde gösterilir, tıklanınca değiştirilebilir */}
                 <td className="px-4 py-3">
                     {depth === 0 ? (
-                        <span className="inline-block text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wide">
-                            {testCategory(test)}
-                        </span>
+                        <select
+                            value={testCategory(test)}
+                            onChange={(e) => onUpdateField(test.id, 'category', e.target.value)}
+                            title="Kategori değiştir"
+                            className="text-[10px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-md uppercase tracking-wide border-none outline-none cursor-pointer transition-colors"
+                        >
+                            {TEST_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
                     ) : (
                         <span className="text-slate-300 text-xs">—</span>
                     )}
@@ -267,6 +260,14 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
   const [subParams, setSubParams] = useState<{ name: string; unit: string; min: string; max: string }[]>([{ name: '', unit: '', min: '', max: '' }]);
   const importFileRef = useRef<HTMLInputElement>(null);
 
+  // Dışarıdan tests güncellenirse ve kullanıcı kirli değilse editörü senkronize et
+  // (React 19 "adjust state during render" pattern'i)
+  const [prevTests, setPrevTests] = useState<TestDefinition[]>(tests);
+  if (prevTests !== tests) {
+    setPrevTests(tests);
+    if (!isDirty) setEditingTests(tests);
+  }
+
   // --- STATS ---
   const stats = useMemo(() => {
       let totalItems = 0;
@@ -410,13 +411,16 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
       reader.onload = (ev) => {
           try {
               const parsed = JSON.parse(ev.target?.result as string);
-              if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].id) {
+              // Tüm öğelerde zorunlu alanlar var mı kontrol et
+              const isValid = Array.isArray(parsed) && parsed.length > 0 &&
+                  parsed.every(t => t && typeof t.id === 'string' && typeof t.name === 'string' && typeof t.key === 'string');
+              if (isValid) {
                   setImportConfirm({ data: parsed, count: parsed.length });
               } else {
-                  setImportError('Geçersiz format. JSON array bekleniyor.');
+                  setImportError('Geçersiz format. Her test için id, name ve key alanları zorunludur.');
               }
           } catch {
-              setImportError('JSON okunamadı.');
+              setImportError('JSON okunamadı. Dosya bozuk veya geçersiz.');
           }
       };
       reader.readAsText(file);
@@ -443,7 +447,8 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
                     }
                     if (field === 'name') {
                         const nameVal = String(value);
-                        return { ...t, name: nameVal, key: nameVal.toLowerCase().replace(/\s+/g, '_') };
+                        // Key'i değiştirme — PDF alias eşleştirmesi key üzerinden çalışır
+                        return { ...t, name: nameVal };
                     }
                     return { ...t, [field]: value };
                 }
@@ -572,7 +577,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
         name: newTestForm.name.trim(),
         key: keyBase,
         category: newTestForm.category,
-        type: 'numeric',
+        type: 'text', // Panel kendisi metin tipi — alt parametreler sayısal
         unit: '',
         subTests: validSubs.map((s, i) => ({
           id: `${uniqueId}_sub_${i}_${Math.floor(Math.random() * 10000)}`,
@@ -957,7 +962,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
                   <div className="p-5 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10">
                       <h3 className="font-bold text-base flex items-center gap-2"><Plus size={18} className="text-blue-400"/> Yeni {isPanel ? 'Panel' : 'Test'} Ekle</h3>
                       <button onClick={() => setNewTestModal(false)} className="text-slate-400 hover:text-white transition-colors p-1">
-                          <RotateCcw size={18}/>
+                          <X size={18}/>
                       </button>
                   </div>
 
