@@ -71,6 +71,34 @@ const extractField = (lines: string[], keys: string[]): string => {
 
 /** Bağımsız (etiketli olmayan) hasta adı satırını bulur */
 const extractPatientName = (lines: string[]): string => {
+    // 0. Pnömokonyoz / ILO raporu — "ÇALIŞANIN ADI SOYADI" etiketi altındaki ALL CAPS ismi tercih et
+    //    Etiket altında firma adı (Title Case) ve sonra isim (ALL CAPS) olabilir
+    for (let i = 0; i < lines.length; i++) {
+        const n = normalizeTr(lines[i].toLowerCase());
+        if (n.includes('çalışanın adı soyadı') || n.includes('çalışan adı soyadı') ||
+            n.includes('çalışanın adı') || n.includes('çalışan adı')) {
+            // Sonraki 4 satırdan ALL CAPS olanı tercih et (gerçek isim)
+            for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+                const t = lines[j].trim();
+                if (!t || t.length < 5 || t.length > 50) continue;
+                if (/^[A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜ\s]+$/.test(t) && t.split(/\s+/).length >= 2) {
+                    // Başlık değil — filtrele
+                    if (!includesTr(t, 'radyografi') && !includesTr(t, 'tanımlama') &&
+                        !includesTr(t, 'okuma') && !includesTr(t, 'raporu')) {
+                        return t;
+                    }
+                }
+            }
+            // ALL CAPS yoksa, sonraki satıra bak (extractField mantığı)
+            if (i + 1 < lines.length) {
+                const next = lines[i + 1].trim();
+                if (next && next.length > 1 && !/^\d+[-.)]/.test(next)) {
+                    return stripTrailingFields(next.replace(/^[\s:=-]+/, '').trim());
+                }
+            }
+        }
+    }
+
     // 1. Önce etiketli alanlara bak
     const labeled = extractField(lines, META.nameKeys);
     if (labeled) return labeled;
@@ -101,7 +129,10 @@ const extractPatientName = (lines: string[]): string => {
                 !includesTr(t, 'için') && !includesTr(t, 'çalışanın') && !includesTr(t, 'çalışan') &&
                 !includesTr(t, 'hastalıkların') && !includesTr(t, 'icd') && !includesTr(t, 'tanı') &&
                 !includesTr(t, 'bölüm') && !includesTr(t, 'muayene') && !includesTr(t, 'formu') &&
-                !includesTr(t, 'sayfa') && !includesTr(t, 'hekim') && !includesTr(t, 'imza')) {
+                !includesTr(t, 'sayfa') && !includesTr(t, 'hekim') && !includesTr(t, 'imza') &&
+                !includesTr(t, 'okuma') && !includesTr(t, 'raporu') && !includesTr(t, 'radyografi') &&
+                !includesTr(t, 'tanımlama') && !includesTr(t, 'iş yeri') && !includesTr(t, 'pnomokonyoz') &&
+                !includesTr(t, 'pnömokonyoz') && !includesTr(t, 'ilo') && !includesTr(t, 'desi')) {
                 return t;
             }
         }
@@ -301,7 +332,8 @@ const isHeaderOnly = (value: string): boolean => {
  * Ek-2 belgesi tüm formu tarar (çok sayfalı).
  */
 const extractSectionValue = (lines: string[], startIdx: number, test: TestDefinition): string | undefined => {
-    const SECTION_LINES = test.key.includes('ek_2') ? 200 : 8;
+    // Ek-2 ve pnömokonyoz çok sayfalı formlardır — tüm metni tara
+    const SECTION_LINES = (test.key.includes('ek_2') || test.key.includes('pnomokonyoz')) ? 200 : 8;
     const endIdx = Math.min(startIdx + SECTION_LINES, lines.length);
     const sectionText = lines.slice(startIdx, endIdx).join('\n');
 
@@ -528,10 +560,44 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
         if (pathMatch) return `SFT Bulgusu: ${pathMatch[0]}`;
     }
 
-    // Pnömokonyoz — ILO radyografi okuma raporu
-    // "4D. DİĞER YORUMLAR" kısmındaki metni al
+    // Pnömokonyoz — ILO radyografi okuma raporu (2 sayfalık form)
+    // Önce "KANAAT" / "SONUÇ" / "GÖRÜŞ" bölümünü bul, oradaki metni al
     if (test.key.includes('pnomokonyoz')) {
-        // "pnömokonyoz açısından" ifadesini ara — bu genelde sonuç satırıdır
+        const sectionLines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+
+        // 1. "KANAAT" / "SONUÇ" / "GÖRÜŞ" bölümünü bul
+        const kanaatIdx = sectionLines.findIndex(l => {
+            const n = normalizeTr(l.toLowerCase());
+            return n.includes('kanaat') || n.includes('sonuç') || n.includes('görüş') || n.includes('öneri');
+        });
+
+        if (kanaatIdx >= 0) {
+            // Kanaat bölümünden sonraki satırları al
+            const kanaatText = sectionLines.slice(kanaatIdx)
+                .map(l => l.replace(/^\d+[-.)]?\s*/, '').trim())
+                .filter(l => l.length > 3 && !l.startsWith('(*'))
+                .join(' ');
+
+            if (kanaatText) {
+                const kNorm = normalizeTr(kanaatText.toLowerCase());
+                // "elverişlidir" / "çalışabilir" / "uygun" kalıbı
+                if (includesTr(kNorm, 'elverişli') || includesTr(kNorm, 'çalışabilir') || includesTr(kNorm, 'uygun')) {
+                    // "pnömokonyoz açısından" ifadesini de içerebilir
+                    if (includesTr(kNorm, 'pnömokonyoz') || includesTr(kNorm, 'pnomokonyoz')) {
+                        return kanaatText.length > 10 ? kanaatText : kanaatText;
+                    }
+                    return kanaatText;
+                }
+                // "normal sınırlarda" kalıbı
+                if (includesTr(kNorm, 'normal') && (includesTr(kNorm, 'sınır') || includesTr(kNorm, 'sinir'))) {
+                    return 'Pnömokonyoz açısından normal sınırlarda akciğer grafisi';
+                }
+                // Genel kanaat metni
+                if (kanaatText.length > 5) return kanaatText;
+            }
+        }
+
+        // 2. "pnömokonyoz açısından" ifadesini ara — bu genelde sonuç satırıdır
         if (includesTr(norm, 'pnömokonyoz') || includesTr(norm, 'pnmokonyoz') || includesTr(norm, 'pnomokonyoz')) {
             // "normal sınırlarda" varsa normal kabul et
             if (includesTr(norm, 'normal') && (includesTr(norm, 'sınır') || includesTr(norm, 'sinir'))) {
@@ -540,14 +606,19 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
             // Patoloji varsa metni al
             if (includesTr(norm, 'bulgu') || includesTr(norm, 'patoloji') || includesTr(norm, 'anormallik') ||
                 includesTr(norm, 'opasite') || includesTr(norm, 'plak') || includesTr(norm, 'kalınla')) {
-                // "4D" ve "DİĞER YORUMLAR" başlığını temizle
                 const result = cleaned.replace(/^4d[.\s]*/i, '').replace(/diger yorumlar/i, '').replace(/diğer yorumlar/i, '').trim();
-                if (result) return result;
+                if (result && result.length > 5) return result;
             }
-            // Genel durum — metni temizle ve döndür
-            const result = cleaned.replace(/^4d[.\s]*/i, '').replace(/diger yorumlar/i, '').replace(/diğer yorumlar/i, '').trim();
-            if (result && result.length > 5) return result;
         }
+
+        // 3. Sadece başlık metni varsa (kısa) sonuç olarak döndürme
+        // "ULUSLARARASI SINIFLANDIRILMASI İÇİN" gibi başlıkları atla
+        if (includesTr(norm, 'uluslararası') || includesTr(norm, 'sınıflandırılması') ||
+            includesTr(norm, 'okuma raporu') || includesTr(norm, 'radyografi')) {
+            return undefined;
+        }
+
+        return undefined;
     }
 
     // Genel metin — temizlenmiş kalan metni döndür (kısa olanı)
