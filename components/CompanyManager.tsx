@@ -5,6 +5,11 @@ import { isAbnormalStatus } from '../utils/lab';
 import { storageService } from '../services/storageService';
 import { ConfirmModal } from './ConfirmModal';
 import { Modal, modalPanel } from './Modal';
+import { usePagination } from '../hooks/usePagination';
+import { BulkActionBar } from './shared/BulkActionBar';
+import { PaginationControls } from './shared/PaginationControls';
+import { ViewToggle } from './shared/ViewToggle';
+import { getInitialView } from '../utils/viewToggle';
 import {
   Building2, Plus, Save, Trash2, Search, Copy,
   User, FileText, FlaskConical, Check,
@@ -122,14 +127,9 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
 
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClone, setConfirmClone] = useState<Company | null>(null);
-
-  // ── İstatistikler ──
-  const stats = useMemo(() => ({
-      total: companies.length,
-      employees: companies.reduce((s, c) => s + (c.employeeCount || 0), 0),
-      cokTehlikeli: companies.filter(c => c.hazardClass === 'cok_tehlikeli').length,
-      records: records.length
-  }), [companies, records]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [listMode, setListMode] = useState<'card' | 'list'>(() => getInitialView('companies', 'list'));
 
   const filteredCompanies = useMemo(() => {
       const q = searchTerm.trim().toLowerCase();
@@ -143,6 +143,12 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
           );
       });
   }, [companies, searchTerm, hazardFilter]);
+
+  const {
+    paginatedItems: paginatedCompanies,
+    currentPage, totalPages, pageSize, setCurrentPage, setPageSize,
+    totalItems, startIndex, endIndex
+  } = usePagination(filteredCompanies, 'companies', 7);
 
   const recordCountOf = (companyId: string) => records.filter(r => r.companyId === companyId).length;
 
@@ -289,6 +295,26 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
     if (editingId === confirmDelete) setFormOpen(false);
     if (activeDetailId === confirmDelete) closeDetail();
     setConfirmDelete(null);
+  };
+
+  const doBulkDelete = () => {
+    onUpdateCompanies(companies.filter(c => !selectedIds.has(c.id)));
+    if (activeDetailId && selectedIds.has(activeDetailId)) closeDetail();
+    setSelectedIds(new Set());
+    setBulkDeleteConfirm(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredCompanies.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredCompanies.map(c => c.id)));
   };
 
   const updateField = <K extends keyof Company>(key: K, value: Company[K] | undefined) =>
@@ -747,26 +773,6 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
         </button>
       </div>
 
-      {/* ── Özet Kartlar ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><Building2 size={18}/></div>
-          <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.total}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Firma</p></div>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0"><UsersIcon size={18}/></div>
-          <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.employees}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Çalışan</p></div>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center shrink-0"><AlertTriangle size={18}/></div>
-          <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.cokTehlikeli}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Çok Tehlikeli</p></div>
-        </div>
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
-          <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.records}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Tarama Kaydı</p></div>
-        </div>
-      </div>
-
       {/* ── Arama & Filtre ── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 group">
@@ -795,6 +801,7 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
             </button>
           ))}
         </div>
+        <ViewToggle view={listMode} onChange={setListMode} storageKey="companies" />
       </div>
 
       {/* ── Firma Kartları ── */}
@@ -815,68 +822,164 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
             </button>
           )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredCompanies.map(company => {
-            const hazard = company.hazardClass ? HAZARD_CLASSES[company.hazardClass] : null;
-            const recCount = recordCountOf(company.id);
-            return (
-              <div
-                key={company.id}
-                onClick={() => openDetail(company)}
-                className="relative bg-white rounded-2xl border border-slate-200 p-5 flex flex-col hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/50 transition-all group cursor-pointer"
-              >
-                {/* Kart başlığı */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3 min-w-0">
+      ) : listMode === 'card' ? (
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden relative">
+          <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+            <input
+              type="checkbox"
+              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white"
+              checked={selectedIds.size === filteredCompanies.length && filteredCompanies.length > 0}
+              onChange={toggleSelectAll}
+            />
+            <span className="text-xs font-bold text-slate-500">
+              {selectedIds.size > 0 ? `${selectedIds.size} firma seçildi` : 'Tümünü seç'}
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
+            {paginatedCompanies.map(company => {
+              const hazard = company.hazardClass ? HAZARD_CLASSES[company.hazardClass] : null;
+              const recCount = recordCountOf(company.id);
+              const isSelected = selectedIds.has(company.id);
+              return (
+                <div
+                  key={company.id}
+                  onClick={() => openDetail(company)}
+                  className={`relative bg-white rounded-2xl border p-5 flex flex-col hover:shadow-lg hover:shadow-blue-100/50 transition-all group cursor-pointer ${isSelected ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-200'}`}
+                >
+                  {/* Checkbox */}
+                  <div className="absolute top-3 right-3 z-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white"
+                      checked={isSelected}
+                      onChange={(e) => { e.stopPropagation(); toggleSelect(company.id); }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  {/* Kart başlığı */}
+                  <div className="flex items-start gap-3 mb-3">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 shadow-sm ${hazard?.avatar ?? 'bg-slate-400'}`}>
                       {company.name.substring(0, 2).toUpperCase()}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1 pr-6">
                       <h3 className="text-sm font-black text-slate-800 truncate leading-tight">{company.name}</h3>
                       <p className="text-[11px] text-slate-400 truncate mt-0.5 flex items-center gap-1">
                         <Factory size={10} className="shrink-0" /> {company.sector || 'Sektör belirtilmemiş'}
                       </p>
                     </div>
                   </div>
-                  {hazard && (
-                    <span className={`text-[9px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap shrink-0 ${hazard.badge}`}>
-                      {hazard.label}
-                    </span>
-                  )}
-                </div>
 
-                {/* İletişim */}
-                <div className="space-y-1.5 mb-4 min-h-[3.5rem]">
-                  {company.contactPerson && (
-                    <p className="text-xs text-slate-600 flex items-center gap-2"><User size={12} className="text-slate-400 shrink-0"/> <span className="truncate">{company.contactPerson}</span></p>
-                  )}
-                  {company.phone && (
-                    <p className="text-xs text-slate-600 flex items-center gap-2"><Phone size={12} className="text-slate-400 shrink-0"/> <span className="truncate">{company.phone}</span></p>
-                  )}
-                  {!company.contactPerson && !company.phone && (
-                    <p className="text-xs text-slate-300 italic">İletişim bilgisi girilmemiş</p>
-                  )}
-                </div>
-
-                {/* Alt istatistik + aksiyonlar */}
-                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
-                    {company.employeeCount !== undefined && (
-                      <span className="flex items-center gap-1"><UsersIcon size={11}/> {company.employeeCount} çalışan</span>
+                  {/* İletişim */}
+                  <div className="space-y-1.5 mb-4 min-h-[3.5rem]">
+                    {company.contactPerson && (
+                      <p className="text-xs text-slate-600 flex items-center gap-2"><User size={12} className="text-slate-400 shrink-0"/> <span className="truncate">{company.contactPerson}</span></p>
                     )}
-                    <span className="flex items-center gap-1"><FlaskConical size={11}/> {company.tests.length} test</span>
-                    <span className="flex items-center gap-1"><FileText size={11}/> {recCount} kayıt</span>
+                    {company.phone && (
+                      <p className="text-xs text-slate-600 flex items-center gap-2"><Phone size={12} className="text-slate-400 shrink-0"/> <span className="truncate">{company.phone}</span></p>
+                    )}
+                    {!company.contactPerson && !company.phone && (
+                      <p className="text-xs text-slate-300 italic">İletişim bilgisi girilmemiş</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); setConfirmClone(company); }} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Kopyala"><Copy size={14}/></button>
-                    <button onClick={(e) => { e.stopPropagation(); openEdit(company); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Düzenle"><Edit2 size={14}/></button>
-                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(company.id); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Sil"><Trash2 size={14}/></button>
+
+                  {/* Alt istatistik + aksiyonlar */}
+                  <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400">
+                      {company.employeeCount !== undefined && (
+                        <span className="flex items-center gap-1"><UsersIcon size={11}/> {company.employeeCount} çalışan</span>
+                      )}
+                      <span className="flex items-center gap-1"><FlaskConical size={11}/> {company.tests.length} test</span>
+                      <span className="flex items-center gap-1"><FileText size={11}/> {recCount} kayıt</span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmClone(company); }} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors" title="Kopyala"><Copy size={14}/></button>
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(company); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Düzenle"><Edit2 size={14}/></button>
+                      <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(company.id); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Sil"><Trash2 size={14}/></button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            itemName="firma"
+          />
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            onBulkDelete={() => setBulkDeleteConfirm(true)}
+            onClearSelection={() => setSelectedIds(new Set())}
+            itemName="firma"
+          />
+        </div>
+      ) : (
+        /* Liste Görünümü */
+        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden relative">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50/80 backdrop-blur-sm text-slate-500 font-semibold border-b border-slate-200">
+                <tr>
+                  <th className="px-3 py-3 w-10 text-center"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white" checked={selectedIds.size === filteredCompanies.length && filteredCompanies.length > 0} onChange={toggleSelectAll}/></th>
+                  <th className="px-4 py-3 text-xs uppercase tracking-wide">Firma</th>
+                  <th className="px-4 py-3 text-xs uppercase tracking-wide">Sektör</th>
+                  <th className="px-4 py-3 text-xs uppercase tracking-wide">Tehlike Sınıfı</th>
+                  <th className="px-4 py-3 text-xs uppercase tracking-wide">Çalışan</th>
+                  <th className="px-4 py-3 text-xs uppercase tracking-wide">Test</th>
+                  <th className="px-4 py-3 text-xs uppercase tracking-wide">Kayıt</th>
+                  <th className="px-4 py-3 text-xs uppercase tracking-wide text-center">İşlemler</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {paginatedCompanies.map(company => {
+                  const hazard = company.hazardClass ? HAZARD_CLASSES[company.hazardClass] : null;
+                  const recCount = recordCountOf(company.id);
+                  const isSelected = selectedIds.has(company.id);
+                  return (
+                    <tr key={company.id} className={`transition-all hover:bg-slate-50 ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                      <td className="px-3 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white" checked={isSelected} onChange={() => toggleSelect(company.id)}/></td>
+                      <td className="px-4 py-3 font-bold text-slate-800 cursor-pointer hover:text-blue-600" onClick={() => openDetail(company)}>{company.name}</td>
+                      <td className="px-4 py-3 text-slate-600">{company.sector || '—'}</td>
+                      <td className="px-4 py-3">{hazard ? <span className={`text-[9px] font-bold px-2 py-1 rounded-lg border whitespace-nowrap ${hazard.badge}`}>{hazard.label}</span> : '—'}</td>
+                      <td className="px-4 py-3 text-slate-500">{company.employeeCount ?? '—'}</td>
+                      <td className="px-4 py-3 text-slate-500">{company.tests.length}</td>
+                      <td className="px-4 py-3 text-slate-500">{recCount}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => openDetail(company)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detay"><Eye size={14}/></button>
+                          <button onClick={() => openEdit(company)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Düzenle"><Edit2 size={14}/></button>
+                          <button onClick={() => setConfirmDelete(company.id)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Sil"><Trash2 size={14}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            itemName="firma"
+          />
+          <BulkActionBar
+            selectedCount={selectedIds.size}
+            onBulkDelete={() => setBulkDeleteConfirm(true)}
+            onClearSelection={() => setSelectedIds(new Set())}
+            itemName="firma"
+          />
         </div>
       )}
 
@@ -1078,6 +1181,15 @@ export const CompanyManager: React.FC<CompanyManagerProps> = ({
         variant="info"
         onConfirm={doCloneCompany}
         onCancel={() => setConfirmClone(null)}
+      />
+
+      <ConfirmModal
+        open={bulkDeleteConfirm}
+        title="Toplu Sil"
+        message={`${selectedIds.size} firma silinecek. Bu işlem geri alınamaz. Emin misiniz?`}
+        confirmLabel="Evet, Sil"
+        onConfirm={doBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
     </div>
   );

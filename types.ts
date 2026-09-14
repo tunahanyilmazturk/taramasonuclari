@@ -82,6 +82,9 @@ export interface OrgInfo {
   taxNumber?: string;   // vergi no
   signerName?: string;  // imza yetkilisi
   signerTitle?: string; // imza yetkilisi unvanı
+  logoKey?: string;     // IndexedDB'de saklanan logo blob anahtarı
+  signatureKey?: string; // imza görüntüsü blob anahtarı
+  primaryColor?: string; // marka ana rengi (hex)
 }
 
 /** İSG tehlike sınıfı (6331 sayılı kanun) */
@@ -113,9 +116,12 @@ export interface Screening {
   id: string;
   companyId: string;
   title: string;
+  screeningType?: 'ise_giris' | 'periyodik'; // tarama türü
   date: string;          // ISO yyyy-mm-dd
   endDate?: string;
-  location: string;
+  startTime?: string;    // HH:mm
+  endTime?: string;      // HH:mm
+  location?: string;
   status: ScreeningStatus;
   testIds: string[];     // planlanan testler
   plannedCount: number;  // planlanan çalışan sayısı
@@ -124,6 +130,8 @@ export interface Screening {
   equipmentIds: string[];
   quoteId?: string;      // kaynak teklif
   notes?: string;
+  coverLetter?: string;  // tarama ön yazısı
+  terms?: string[];      // tarama şartları ve koşulları
 }
 
 /** Teklif durum akışı: Taslak → Gönderildi → Onaylandı/Reddedildi */
@@ -208,15 +216,60 @@ export interface TeamMember {
 // --- AUTH TYPES ---
 export type UserRole = 'super_admin' | 'user';
 
+// --- İZİN/ROL SİSTEMİ ---
+// Uygulama modülleri — yetki matrisinde her modül için görüntüleme/düzenleme izni verilir
+export const APP_MODULES = [
+  'home', 'dashboard', 'screenings', 'quotes', 'calendar',
+  'equipment', 'team', 'companies', 'config', 'reports'
+] as const;
+export type AppModule = (typeof APP_MODULES)[number];
+
+export const MODULE_LABELS: Record<AppModule, string> = {
+  home: 'Ana Sayfa',
+  dashboard: 'Sonuçlar',
+  screenings: 'Taramalar',
+  quotes: 'Teklifler',
+  calendar: 'Takvim',
+  equipment: 'Ekipman',
+  team: 'Ekip',
+  companies: 'Firmalar',
+  config: 'Test Havuzu',
+  reports: 'Raporlar'
+};
+
+// Bir modül için izin seviyesi
+export type PermissionLevel = 'none' | 'view' | 'edit';
+
+export type ModulePermissions = Record<AppModule, PermissionLevel>;
+
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  color?: string; // hex veya tailwind renk adı
+  permissions: ModulePermissions;
+  isSystem?: boolean; // sistem rolü (silinemez)
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   username: string;
   password: string; // In a real app, this should be hashed. For localStorage, we'll store simple strings.
   fullName: string;
   role: UserRole;
+  roleId?: string; // Yeni: özel rol ataması (role === 'user' iken kullanılır)
+  email?: string;
+  phone?: string;
+  jobTitle?: string;
+  active?: boolean; // hesap aktif/pasif
+  lastLogin?: string;
 }
 
 // --- SECURITY TYPES ---
+export type LogCategory = 'auth' | 'data' | 'system' | 'user' | 'ai';
+export type LogSeverity = 'info' | 'success' | 'warning' | 'danger';
+
 export interface AuditLog {
   id: string;
   userId: string;
@@ -224,6 +277,9 @@ export interface AuditLog {
   action: string; // e.g., "LOGIN", "DELETE_RECORD", "EXPORT_DATA"
   details: string;
   timestamp: string;
+  category?: LogCategory;
+  severity?: LogSeverity;
+  ip?: string;
 }
 
 export interface AppState {
@@ -261,5 +317,5 @@ export interface Notification {
   message: string;
 }
 // Ayarlar sayfası sekme kimlikleri — #/settings/<tab> rotaları için
-export const SETTINGS_TAB_IDS = ['system', 'org', 'appearance', 'ai', 'users', 'security', 'logs'] as const;
+export const SETTINGS_TAB_IDS = ['profile', 'system', 'org', 'appearance', 'ai', 'users', 'security', 'logs'] as const;
 export type SettingsTab = typeof SETTINGS_TAB_IDS[number];

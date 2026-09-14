@@ -4,11 +4,16 @@ import { storageService } from '../../services/storageService';
 import { testPrice, testCategory, TEST_CATEGORIES } from '../../constants';
 import { Modal, modalPanel } from '../Modal';
 import { ConfirmModal } from '../ConfirmModal';
+import { usePagination } from '../../hooks/usePagination';
+import { BulkActionBar } from '../shared/BulkActionBar';
+import { PaginationControls } from '../shared/PaginationControls';
+import { ViewToggle } from '../shared/ViewToggle';
+import { getInitialView } from '../../utils/viewToggle';
 import {
   FileText, Plus, Search, Copy, Trash2, Edit2, Printer, Send, CheckCircle2,
   XCircle, X, Calculator, Building2, CalendarDays, ArrowLeft, ArrowRight,
   RotateCcw, Stethoscope, Check, Users as UsersIcon, FlaskConical, Factory, ClipboardList,
-  ChevronUp, ChevronDown, ScrollText, ListChecks, AlertTriangle, Eye, Download, Sparkles
+  ChevronUp, ChevronDown, ScrollText, ListChecks, AlertTriangle, Eye, Download, Sparkles, Clock
 } from 'lucide-react';
 
 interface QuotesProps {
@@ -434,6 +439,9 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmClone, setConfirmClone] = useState<Quote | null>(null);
   const [draftRestored, setDraftRestored] = useState(false); // sihirbaz taslağı geri yüklendi bilgisi
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
+  const [listMode, setListMode] = useState<'card' | 'list'>(() => getInitialView('quotes', 'list'));
 
   // Sihirbaz taslağını localStorage'a sürekli yaz — sayfa yenilense bile form korunur
   useEffect(() => {
@@ -496,15 +504,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     }
   }, [quotes, searchTerm, statusFilter, typeFilter, sortBy, companies]);
 
+  const {
+    paginatedItems: paginatedQuotes,
+    currentPage, totalPages, pageSize, setCurrentPage, setPageSize,
+    totalItems, startIndex, endIndex
+  } = usePagination(filteredQuotes, 'quotes', 7);
+
   const stats = useMemo(() => ({
-    total: quotes.length,
-    taslak: quotes.filter(q => q.status === 'taslak').length,
-    gonderildi: quotes.filter(q => q.status === 'gonderildi').length,
-    expired: quotes.filter(q => isExpired(q)).length,
-    bekleyenTutar: quotes.filter(q => q.status === 'gonderildi')
-      .reduce((s, q) => s + totalOf(q), 0),
-    onayliTutar: quotes.filter(q => q.status === 'onaylandi')
-      .reduce((s, q) => s + totalOf(q), 0)
+    expired: quotes.filter(q => isExpired(q)).length
   }), [quotes]);
 
   // ── Sihirbaz ──
@@ -814,6 +821,26 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
     setConfirmDelete(null);
   };
 
+  const doBulkDelete = () => {
+    persist(quotes.filter(q => !selectedIds.has(q.id)));
+    if (activeDetailId && selectedIds.has(activeDetailId)) closeDetail();
+    setSelectedIds(new Set());
+    setBulkDeleteConfirm(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredQuotes.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredQuotes.map(q => q.id)));
+  };
+
   const doClone = () => {
     if (!confirmClone) return;
     const cloned: Quote = {
@@ -902,38 +929,6 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
             </button>
           </div>
 
-          {/* Özet Kartlar — tıklanabilir filtre */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <button onClick={() => setStatusFilter('all')} className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${statusFilter === 'all' ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-200'}`}>
-              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><FileText size={18}/></div>
-              <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.total}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Toplam Teklif</p></div>
-            </button>
-            <button onClick={() => setStatusFilter(f => f === 'taslak' ? 'all' : 'taslak')} className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${statusFilter === 'taslak' ? 'border-slate-400 ring-2 ring-slate-200' : 'border-slate-200 hover:border-slate-300'}`}>
-              <div className="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center shrink-0"><Edit2 size={18}/></div>
-              <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.taslak}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Taslak</p></div>
-            </button>
-            <button onClick={() => setStatusFilter(f => f === 'gonderildi' ? 'all' : 'gonderildi')} className={`bg-white rounded-2xl border p-4 flex items-center gap-3 text-left transition-all ${statusFilter === 'gonderildi' ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-200'}`}>
-              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><Send size={18}/></div>
-              <div><p className="text-xl font-black text-slate-800 tabular-nums">{stats.gonderildi}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Bekleyen Yanıt</p><p className="text-[9px] font-bold text-blue-500 tabular-nums">₺{fmtTL(stats.bekleyenTutar)}</p></div>
-            </button>
-            <div className="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0"><Calculator size={18}/></div>
-              <div><p className="text-xl font-black text-emerald-600 tabular-nums">₺{fmtTL(stats.onayliTutar)}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Onaylı Tutar</p></div>
-            </div>
-          </div>
-
-          {/* Süresi dolan teklifler uyarısı */}
-          {stats.expired > 0 && statusFilter !== 'expired' && (
-            <button
-              onClick={() => setStatusFilter('expired')}
-              className="w-full flex items-center gap-3 p-3 bg-red-50 hover:bg-red-100/70 border border-red-200 rounded-2xl text-left transition-colors"
-            >
-              <AlertTriangle size={16} className="text-red-500 shrink-0" />
-              <p className="text-xs font-bold text-red-700 flex-1">{stats.expired} teklifin geçerlilik süresi doldu — takip veya revizyon gerekiyor</p>
-              <span className="text-[10px] font-bold text-red-500 shrink-0">Görüntüle →</span>
-            </button>
-          )}
-
           {/* Arama & Filtreler */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1 group">
@@ -966,6 +961,7 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 <option value="amount_asc">Tutar (Düşük)</option>
                 <option value="validity">Geçerlilik (Yakın)</option>
               </select>
+              <ViewToggle view={listMode} onChange={setListMode} storageKey="quotes" />
             </div>
           </div>
           <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl p-1 overflow-x-auto scrollbar-none shadow-sm w-fit">
@@ -1011,12 +1007,13 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                 </button>
               )}
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          ) : listMode === 'list' ? (
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden relative">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[720px]">
                   <thead>
                     <tr className="bg-slate-50/70 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <th className="px-3 py-3 w-10 text-center"><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white" checked={selectedIds.size === filteredQuotes.length && filteredQuotes.length > 0} onChange={toggleSelectAll}/></th>
                       <th className="px-5 py-3">Teklif No</th>
                       <th className="px-4 py-3">Firma</th>
                       <th className="px-4 py-3">Tarih / Geçerlilik</th>
@@ -1027,12 +1024,14 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredQuotes.map(quote => {
+                    {paginatedQuotes.map(quote => {
                       const comp = companyOf(quote.companyId);
                       const t = calcTotals(quote.items, quote.discountRate, quote.vatRate, quote.discountType ?? 'percent');
                       const expired = isExpired(quote);
+                      const isSelected = selectedIds.has(quote.id);
                       return (
-                        <tr key={quote.id} onClick={() => openDetail(quote)} className="hover:bg-blue-50/30 cursor-pointer transition-colors">
+                        <tr key={quote.id} onClick={() => openDetail(quote)} className={`hover:bg-blue-50/30 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                          <td className="px-3 py-3.5 text-center" onClick={(e) => e.stopPropagation()}><input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white" checked={isSelected} onChange={() => toggleSelect(quote.id)}/></td>
                           <td className="px-5 py-3.5"><p className="font-bold text-slate-800 text-xs font-mono">{quote.quoteNumber}</p></td>
                           <td className="px-4 py-3.5">
                             <p className="font-bold text-slate-700 text-xs">{comp?.name || '—'}</p>
@@ -1084,6 +1083,111 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
                   </tbody>
                 </table>
               </div>
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemName="teklif"
+              />
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                onBulkDelete={() => setBulkDeleteConfirm(true)}
+                onClearSelection={() => setSelectedIds(new Set())}
+                itemName="teklif"
+              />
+            </div>
+          ) : (
+            /* Kart Görünümü */
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden relative">
+              <div className="p-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white"
+                  checked={selectedIds.size === filteredQuotes.length && filteredQuotes.length > 0}
+                  onChange={toggleSelectAll}
+                />
+                <span className="text-xs font-bold text-slate-500">
+                  {selectedIds.size > 0 ? `${selectedIds.size} teklif seçildi` : 'Tümünü seç'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
+                {paginatedQuotes.map(quote => {
+                  const comp = companyOf(quote.companyId);
+                  const t = calcTotals(quote.items, quote.discountRate, quote.vatRate, quote.discountType ?? 'percent');
+                  const expired = isExpired(quote);
+                  const isSelected = selectedIds.has(quote.id);
+                  return (
+                    <div
+                      key={quote.id}
+                      onClick={() => openDetail(quote)}
+                      className={`relative bg-white rounded-2xl border p-5 flex flex-col hover:shadow-lg hover:shadow-blue-100/50 transition-all group cursor-pointer ${isSelected ? 'border-blue-300 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-200'}`}
+                    >
+                      <div className="absolute top-3 right-3 z-10">
+                        <input
+                          type="checkbox"
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4 bg-white"
+                          checked={isSelected}
+                          onChange={(e) => { e.stopPropagation(); toggleSelect(quote.id); }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          <FileText size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1 pr-6">
+                          <h3 className="text-sm font-black text-slate-800 truncate">{comp?.name || '—'}</h3>
+                          <p className="text-[11px] text-slate-400 font-mono mt-0.5">{quote.quoteNumber}</p>
+                        </div>
+                      </div>
+                      {quote.title && <p className="text-xs text-slate-500 truncate mb-2" title={quote.title}>{quote.title}</p>}
+                      <div className="space-y-1.5 mb-3 text-xs text-slate-600">
+                        <p className="flex items-center gap-2"><CalendarDays size={12} className="text-slate-400 shrink-0"/> {new Date(quote.createdAt).toLocaleDateString('tr-TR')}</p>
+                        <p className={`flex items-center gap-2 ${expired ? 'text-red-500 font-bold' : 'text-slate-500'}`}>
+                          <Clock size={12} className="shrink-0"/> Geçerlilik: {new Date(quote.validUntil).toLocaleDateString('tr-TR')}{expired ? ' (doldu)' : ''}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border inline-flex items-center gap-1.5 ${STATUS_META[quote.status].badge}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_META[quote.status].dot}`} />
+                          {STATUS_META[quote.status].label}
+                        </span>
+                        <span className="font-black text-slate-800 text-sm tabular-nums">₺{fmtTL(t.total)}</span>
+                      </div>
+                      <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <span className="text-[10px] text-slate-400">{quote.items.length} kalem</span>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={(e) => { e.stopPropagation(); openDetail(quote); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detay"><Eye size={14}/></button>
+                          <button onClick={(e) => { e.stopPropagation(); openEdit(quote); }} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Düzenle"><Edit2 size={14}/></button>
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmDelete(quote.id); }} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Sil"><Trash2 size={14}/></button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <PaginationControls
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={setPageSize}
+                itemName="teklif"
+              />
+              <BulkActionBar
+                selectedCount={selectedIds.size}
+                onBulkDelete={() => setBulkDeleteConfirm(true)}
+                onClearSelection={() => setSelectedIds(new Set())}
+                itemName="teklif"
+              />
             </div>
           )}
         </>
@@ -2484,6 +2588,15 @@ export const Quotes: React.FC<QuotesProps> = ({ companies, allTests, onGoToDashb
         variant="info"
         onConfirm={doClone}
         onCancel={() => setConfirmClone(null)}
+      />
+
+      <ConfirmModal
+        open={bulkDeleteConfirm}
+        title="Toplu Sil"
+        message={`${selectedIds.size} teklif kalıcı olarak silinecek. Emin misiniz?`}
+        confirmLabel="Evet, Sil"
+        onConfirm={doBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
     </div>
   );

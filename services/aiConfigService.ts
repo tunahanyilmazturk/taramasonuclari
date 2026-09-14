@@ -2,7 +2,7 @@
 // Anahtar girilmezse build-time env değişkeni (GEMINI_API_KEY) kullanılır.
 
 export type AiPurpose = 'extraction' | 'comment';
-export type AiProvider = 'gemini' | 'local';
+export type AiProvider = 'gemini' | 'local' | 'openrouter';
 
 export interface CustomModel {
     id: string;
@@ -17,7 +17,9 @@ const KEYS = {
     MODELS: 'mediscan_ai_models',
     CUSTOM_MODELS: 'mediscan_ai_custom_models',
     CATEGORY: 'mediscan_ai_model_category',
-    PROVIDER: 'mediscan_ai_provider'
+    PROVIDER: 'mediscan_ai_provider',
+    OPENROUTER_KEY: 'mediscan_ai_openrouter_key',
+    OPENROUTER_MODEL: 'mediscan_ai_openrouter_model'
 };
 
 // Gemini'nin güncel metin üretim modelleri (API ile test edilmiş, çalışan modeller)
@@ -43,6 +45,17 @@ export const CATEGORY_LABELS: Record<ModelCategory, string> = {
     gemini3: 'Gemini 3.x Serisi',
     custom: 'Özel Modeller'
 };
+
+// OpenRouter üzerinde ücretsiz/ekonomik GLM modelleri
+export const OPENROUTER_MODELS: CustomModel[] = [
+    { id: 'or_glm52_free', name: 'z-ai/glm-5.2:free', label: 'GLM-5.2 (Ücretsiz) — 256K context, tamamen ücretsiz' },
+    { id: 'or_glm47_flash_free', name: 'z-ai/glm-4.7-flash:free', label: 'GLM-4.7 Flash (Ücretsiz) — Hızlı, ücretsiz' },
+    { id: 'or_glm45_flash_free', name: 'z-ai/glm-4.5-flash:free', label: 'GLM-4.5 Flash (Ücretsiz) — Hızlı, ücretsiz' },
+    { id: 'or_glm52', name: 'z-ai/glm-5.2', label: 'GLM-5.2 (Ücretli) — 1M context, en yetkin' },
+    { id: 'or_glm47', name: 'z-ai/glm-4.7', label: 'GLM-4.7 (Ücretli) — Dengeli' },
+    { id: 'or_llama_405b_free', name: 'meta-llama/llama-4-405b:free', label: 'Llama 4 405B (Ücretsiz) — Meta en büyük model' },
+    { id: 'or_deepseek_v3_free', name: 'deepseek/deepseek-chat-v3:free', label: 'DeepSeek V3 (Ücretsiz) — Kod + metin' }
+];
 
 // Kategori → model ID eşleştirme
 const CATEGORY_MAP: Record<ModelCategory, string[]> = {
@@ -200,5 +213,33 @@ export const aiConfigService = {
 
     setProvider: (provider: AiProvider) => {
         localStorage.setItem(KEYS.PROVIDER, provider);
+    },
+
+    // --- OPENROUTER (GLM-5.2 Ücretsiz) ---
+    getOpenRouterKey: (): string | undefined => {
+        const custom = localStorage.getItem(KEYS.OPENROUTER_KEY)?.trim();
+        if (custom) return custom;
+        const envKey = process.env.OPENROUTER_API_KEY?.trim();
+        return envKey || undefined;
+    },
+
+    hasOpenRouterKey: (): boolean => !!localStorage.getItem(KEYS.OPENROUTER_KEY)?.trim(),
+
+    setOpenRouterKey: (key: string) => {
+        const trimmed = key.trim();
+        if (trimmed) localStorage.setItem(KEYS.OPENROUTER_KEY, trimmed);
+    },
+
+    clearOpenRouterKey: () => {
+        localStorage.removeItem(KEYS.OPENROUTER_KEY);
+    },
+
+    getOpenRouterModel: (): string => {
+        return localStorage.getItem(KEYS.OPENROUTER_MODEL) || 'z-ai/glm-5.2:free';
+    },
+
+    setOpenRouterModel: (model: string) => {
+        const trimmed = model.trim();
+        if (trimmed) localStorage.setItem(KEYS.OPENROUTER_MODEL, trimmed);
     }
 };

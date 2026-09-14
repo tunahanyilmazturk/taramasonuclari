@@ -3,6 +3,8 @@ import { Company, PatientRecord, ResultStatus, ExtractedResult, TestDefinition }
 import { storageService } from '../services/storageService';
 import { extractTextFromPdf } from '../services/pdfService';
 import { analyzeMedicalText } from '../services/geminiService';
+import { aiConfigService } from '../services/aiConfigService';
+import { savePdf as savePdfBlob, openPdfInNewTab } from '../services/pdfStorage';
 import { exportToExcel } from '../services/excelService';
 import { DashboardModals } from './DashboardModals';
 import { ConfirmModal } from './ConfirmModal';
@@ -17,7 +19,8 @@ import type { DashboardStats, ChartData, DepartmentStat, TestStat } from './dash
 import {
   Building2, Sparkles, RotateCcw, Download, List, BarChart3, Loader2,
   UploadCloud, UserPlus, ArrowRight, ArrowLeft, CheckCircle2, Plus, FlaskConical, Check,
-  FileText, Eye, AlertTriangle, ChevronRight, MapPin, Search, Stethoscope, CalendarDays
+  FileText, Eye, AlertTriangle, ChevronRight, MapPin, Search, Stethoscope, CalendarDays,
+  KeyRound, Cpu, X
 } from 'lucide-react';
 
 const AnalyticsView = lazy(() =>
@@ -34,6 +37,7 @@ interface DashboardProps {
   onToggleReview: (id: string) => void;
   onDeleteRecord: (id: string, skipConfirm?: boolean) => void;
   onClearRecords: (companyId: string) => void;
+  onClearDemoRecords: (companyId: string) => number;
   onUpdateCompanyTests: (companyId: string, tests: TestDefinition[]) => void;
   onLoadDemo: () => void;
   onNavigate?: (tab: string) => void; // modül bağlantıları (ör. yaklaşan taramalar → Taramalar)
@@ -69,6 +73,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onToggleReview,
   onDeleteRecord,
   onClearRecords,
+  onClearDemoRecords,
   onUpdateCompanyTests,
   onLoadDemo,
   onNavigate,
@@ -105,6 +110,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState({ current: 0, total: 0, currentFile: '' });
   const [batchErrors, setBatchErrors] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  const [showNoApiKeyModal, setShowNoApiKeyModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   // Görünüm modu tercihi localStorage'da saklanır — yenilemede korunur
@@ -166,8 +173,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setSelectedTestIds(new Set());
   };
 
-  // Firma seçimi geçersizse ilk firmaya dön
-  if (companies.length > 0 && !selectedCompany) {
+  // Firma seçimi geçersizse ilk firmaya dön — sadece önceden bir seçim vardıysa (silinmiş olabilir)
+  if (companies.length > 0 && selectedCompanyId && !selectedCompany) {
     setSelectedCompanyId(companies[0].id);
   }
 
@@ -214,11 +221,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const companyRecordsBase = useMemo(() =>
     records.filter(r => r.companyId === selectedCompanyId),
   [records, selectedCompanyId]);
-
-  // Kayıt varsa otomatik sonuç adımına geç (sadece sihirbaz modunda)
-  if (pageMode === 'workspace' && companyRecordsBase.length > 0 && wizardStep === 'setup' && !isProcessing) {
-    setWizardStep('results');
-  }
 
   // ── GENEL BAKIŞ VERİLERİ ──
   const companySummaries = useMemo(() => {
@@ -274,6 +276,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const startNewResult = () => {
       setPageMode('workspace');
       setWizardStep('setup');
+      setSelectedCompanyId('');
+      setSelectedScreeningId('');
+      setSelectedTestIds(new Set());
       setViewMode('list');
       clearFilters();
   };
@@ -640,10 +645,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
       fileInputRef.current.value = '';
     }
     setIsClearConfirmOpen(false);
+    // Kayıtlar temizlendi — sihirbazı başa döndür
+    setWizardStep('setup');
   };
 
-  const processFiles = async (files: File[]) => {
+  const processFiles = async (files: File[], forceLocal = false) => {
     if (!selectedCompany || files.length === 0) return;
+
+    // API key kontrolü — Gemini seçili ama anahtar yoksa kullanıcıya seçenek sun
+    const provider = aiConfigService.getProvider();
+    const apiKey = aiConfigService.getApiKey();
+    if (!forceLocal && provider !== 'local' && !apiKey) {
+      setPendingFiles(files);
+      setShowNoApiKeyModal(true);
+      return;
+    }
+
+    // Demo kayıtları otomatik temizle — gerçek sonuç eklemeden önce demo veriyi kaldır
+    onClearDemoRecords(selectedCompany.id);
+
     // Adım 1'de seçilen testler firmaya kaydedildi — selectedCompany.tests güncel
     const testsToLookFor = selectedTests.length > 0 ? selectedTests : selectedCompany.tests;
 
@@ -680,7 +700,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               }
 
               const text = await extractTextFromPdf(file);
-              const analysis = await analyzeMedicalText(text, testsToLookFor);
+              const analysis = await analyzeMedicalText(text, testsToLookFor, 5, forceLocal);
 
               const { results, statusMap } = computeRecordValues(testsToLookFor, def => {
                   const found = analysis.extractedResults.find(r =>
@@ -704,6 +724,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
               };
 
               activeRecordsBuffer.push(newRecord);
+
+              // PDF'in orijinal dosyasını IndexedDB'ye sakla — sonra açılabilsin
+              savePdfBlob(newRecord.id, file);
 
           } catch (err: unknown) {
               const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
@@ -755,6 +778,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const openPatientModal = (record: PatientRecord) => {
       if (onNavigate) onNavigate(`dashboard/${record.id}`);
       else setLocalRecordId(record.id);
+  };
+
+  /** PDF'i yeni sekmede aç — IndexedDB'den blob al, aç */
+  const handleOpenPdf = async (record: PatientRecord) => {
+      const ok = await openPdfInNewTab(record.id, record.fileName);
+      if (!ok) {
+          setBatchErrors(prev => [...prev, `${record.patientName}: PDF dosyası bulunamadı (sadece işlenen metin saklanmış olabilir).`]);
+      }
   };
 
   /** Hasta modalında önceki/sonraki gezinme + kapatma — URL'yi günceller */
@@ -1499,6 +1530,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 onToggleReview={handleToggleReviewSynced}
                 onDeleteRecord={onDeleteRecord}
                 onOpenRecord={openPatientModal}
+                onOpenPdf={handleOpenPdf}
                 onClearRecords={onClearRecords}
                 onLoadDemo={onLoadDemo}
                 currentPage={currentPage}
@@ -1585,6 +1617,55 @@ export const Dashboard: React.FC<DashboardProps> = ({
         onConfirm={doBulkDelete}
         onCancel={() => setBulkDeleteConfirm(false)}
       />
+
+      {/* API Key Yok Modalı */}
+      {showNoApiKeyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setShowNoApiKeyModal(false); setPendingFiles(null); }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="p-5 bg-amber-500 text-white flex items-center justify-between">
+              <h3 className="font-bold text-base flex items-center gap-2"><KeyRound size={18}/> API Anahtarı Gerekli</h3>
+              <button onClick={() => { setShowNoApiKeyModal(false); setPendingFiles(null); }} className="text-white/80 hover:text-white transition-colors p-1">
+                <X size={18}/>
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20}/>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">Gemini API anahtarı tanımlı değil</p>
+                  <p className="text-xs text-slate-500 mt-1">PDF sonuçlarını yapay zeka ile okumak için bir API anahtarı gerekir. Anahtarınız yoksa yerel sistem (pattern tabanlı) ile devam edebilirsiniz.</p>
+                </div>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <Cpu size={14} className="text-blue-500"/>
+                  <span><b>Yerel Sistem:</b> API anahtarı olmadan çalışır, regex/pattern tabanlı okuma yapar. Hassas metinlerde AI kadar başarılı olmayabilir.</span>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 pt-0 flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  setShowNoApiKeyModal(false);
+                  if (pendingFiles) processFiles(pendingFiles, true);
+                  setPendingFiles(null);
+                }}
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-200 flex items-center justify-center gap-2"
+              >
+                <Cpu size={16}/> Yerel Sistem ile Devam Et
+              </button>
+              <button
+                onClick={() => { setShowNoApiKeyModal(false); setPendingFiles(null); }}
+                className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-sm transition-all"
+              >
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

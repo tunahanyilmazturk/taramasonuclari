@@ -113,7 +113,11 @@ export const DEFAULT_TESTS: TestDefinition[] = [
   { id: 'toks_fenol_oran', name: 'Fenol / Kreatinin Oranı', key: 'fenol_oran', unit: 'mg/g krea', type: 'numeric', range: { min: 0, max: 20 } },
   { id: 'toks_hidroksipiren', name: '1-Hidroksipiren', key: 'hidroksipiren', unit: 'µg/L', type: 'numeric', range: { min: 0.0, max: 2.5 } },
   { id: 'toks_benzen', name: 'Benzen (İdrar)', key: 'benzen_idrar', unit: 'µg/L', type: 'numeric', range: { min: 0, max: 1 } },
-  { id: 'toks_okresol', name: 'O-Kresol', key: 'o_kresol', unit: 'mcg/ml', type: 'numeric', range: { min: 0, max: 1 } }
+  { id: 'toks_okresol', name: 'O-Kresol', key: 'o_kresol', unit: 'mcg/ml', type: 'numeric', range: { min: 0, max: 1 } },
+
+  // --- PNÖMOKONYOZ (ILO Radyografi Okuması) ---
+  { id: 'pnomokonyoz_1', name: 'Pnömokonyoz 1', key: 'pnomokonyoz_1', unit: 'Sonuç', type: 'text' },
+  { id: 'pnomokonyoz_2', name: 'Pnömokonyoz 2', key: 'pnomokonyoz_2', unit: 'Sonuç', type: 'text' }
 ];
 
 /** Varsayılan test fiyatları (₺) — test tanımında unitPrice yoksa kullanılır */
@@ -137,7 +141,9 @@ export const TEST_DEFAULT_PRICES: Record<string, number> = {
   // Ağır metaller
   krom: 350, kadmiyum: 350, manganez: 350, civa: 400, kursun: 350,
   // Kimyasallar
-  fenol_idrar: 300, fenol_oran: 150, hidroksipiren: 500, benzen_idrar: 350, o_kresol: 350
+  fenol_idrar: 300, fenol_oran: 150, hidroksipiren: 500, benzen_idrar: 350, o_kresol: 350,
+  // Pnömokonyoz
+  pnomokonyoz_1: 300, pnomokonyoz_2: 300
 };
 
 /** Testin etkin birim fiyatı — test.unitPrice varsa o, yoksa varsayılan tablo */
@@ -171,7 +177,9 @@ export const DEFAULT_TEST_CATEGORIES: Record<string, string> = {
   krom: 'Ağır Metaller', kadmiyum: 'Ağır Metaller', manganez: 'Ağır Metaller', civa: 'Ağır Metaller', kursun: 'Ağır Metaller',
   kreatinin_spot_idrar: 'Toksikoloji', mukonik_asit: 'Toksikoloji', mukonik_asit_oran: 'Toksikoloji',
   fenol_idrar: 'Toksikoloji', fenol_oran: 'Toksikoloji', hidroksipiren: 'Toksikoloji',
-  benzen_idrar: 'Toksikoloji', o_kresol: 'Toksikoloji'
+  benzen_idrar: 'Toksikoloji', o_kresol: 'Toksikoloji',
+  pnomokonyoz_1: 'Muayene & Görüntüleme',
+  pnomokonyoz_2: 'Muayene & Görüntüleme'
 };
 
 /** Testin etkin kategorisi — test.category varsa o, yoksa key bazlı varsayılan */

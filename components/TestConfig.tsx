@@ -99,6 +99,17 @@ const TestRow: React.FC<TestRowProps> = ({
                     </div>
                 </td>
 
+                {/* CATEGORY COLUMN — sadece root testlerde gösterilir */}
+                <td className="px-4 py-3">
+                    {depth === 0 ? (
+                        <span className="inline-block text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wide">
+                            {testCategory(test)}
+                        </span>
+                    ) : (
+                        <span className="text-slate-300 text-xs">—</span>
+                    )}
+                </td>
+
                 {/* TYPE COLUMN */}
                 <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -250,6 +261,10 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
   const [importError, setImportError] = useState<string | null>(null);
   const [showPresetMenu, setShowPresetMenu] = useState(false);
   const [importConfirm, setImportConfirm] = useState<{ data: TestDefinition[]; count: number } | null>(null);
+  const [newTestModal, setNewTestModal] = useState(false);
+  const [newTestForm, setNewTestForm] = useState({ name: '', unit: '', type: 'numeric' as TestType, category: 'Diğer', min: '', max: '' });
+  const [isPanel, setIsPanel] = useState(false);
+  const [subParams, setSubParams] = useState<{ name: string; unit: string; min: string; max: string }[]>([{ name: '', unit: '', min: '', max: '' }]);
   const importFileRef = useRef<HTMLInputElement>(null);
 
   // --- STATS ---
@@ -510,17 +525,72 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
   }, []);
 
   const handleAddRootTest = () => {
+    setNewTestForm({ name: '', unit: '', type: 'numeric', category: 'Diğer', min: '', max: '' });
+    setIsPanel(false);
+    setSubParams([{ name: '', unit: '', min: '', max: '' }]);
+    setNewTestModal(true);
+  };
+
+  // Otomatik tamamlama — mevcut test isimlerinden öneri
+  const existingTestNames = useMemo(() => {
+    const names: string[] = [];
+    const traverse = (list: TestDefinition[]) => list.forEach(t => { names.push(t.name); if (t.subTests) traverse(t.subTests); });
+    traverse(editingTests);
+    return names.map(n => n.toLowerCase());
+  }, [editingTests]);
+
+  const nameSuggestions = useMemo(() => {
+    const q = newTestForm.name.trim().toLowerCase();
+    if (!q) return [];
+    return editingTests
+      .flatMap(t => [t, ...(t.subTests ?? [])])
+      .filter(t => t.name.toLowerCase().includes(q) && !t.name.toLowerCase().startsWith(q))
+      .map(t => t.name)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .slice(0, 4);
+  }, [newTestForm.name, editingTests]);
+
+  const isDuplicateName = existingTestNames.includes(newTestForm.name.trim().toLowerCase());
+
+  const confirmAddRootTest = () => {
+    if (!newTestForm.name.trim()) return;
     const uniqueId = `root-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-    const newTest: TestDefinition = {
-      id: uniqueId,
-      name: 'Yeni Test',
-      key: `yeni_test_${Math.floor(Math.random() * 1000)}`,
-      unit: '',
-      type: 'numeric',
-      range: { min: 0, max: 100 }
-    };
-    setEditingTests(prev => [...prev, newTest]);
+    const keyBase = newTestForm.name.trim().toLowerCase().replace(/\s+/g, '_');
+
+    if (isPanel) {
+      const validSubs = subParams.filter(s => s.name.trim());
+      if (validSubs.length === 0) return;
+      const newTest: TestDefinition = {
+        id: uniqueId,
+        name: newTestForm.name.trim(),
+        key: keyBase,
+        category: newTestForm.category,
+        type: 'numeric',
+        unit: '',
+        subTests: validSubs.map((s, i) => ({
+          id: `${uniqueId}_sub_${i}_${Math.floor(Math.random() * 10000)}`,
+          name: s.name.trim(),
+          key: `${keyBase}_${s.name.trim().toLowerCase().replace(/\s+/g, '_')}`,
+          unit: s.unit.trim(),
+          type: 'numeric' as TestType,
+          range: { min: parseFloat(s.min) || 0, max: parseFloat(s.max) || 0 }
+        }))
+      };
+      setEditingTests(prev => [...prev, newTest]);
+    } else {
+      const newTest: TestDefinition = {
+        id: uniqueId,
+        name: newTestForm.name.trim(),
+        key: keyBase,
+        unit: newTestForm.unit.trim(),
+        type: newTestForm.type,
+        category: newTestForm.category,
+        ...(newTestForm.type === 'numeric' ? { range: { min: parseFloat(newTestForm.min) || 0, max: parseFloat(newTestForm.max) || 0 } } : {})
+      };
+      setEditingTests(prev => [...prev, newTest]);
+    }
     setIsDirty(true);
+    setNewTestModal(false);
   };
 
   const handleAddSubTest = React.useCallback((parentId: string) => {
@@ -573,7 +643,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
       setIsDirty(true);
   }, []);
 
-  // --- FILTERING ---
+  // --- FILTERING + GROUPING ---
   const filteredTests = useMemo(() => {
     let result = editingTests;
 
@@ -666,81 +736,89 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
         </div>
 
         {/* TOOLBAR */}
-        <div className="flex flex-col lg:flex-row gap-4 justify-between items-center bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-sm sticky top-20 z-20">
-             <div className="flex items-center gap-3 w-full lg:w-auto">
-                 <div className="relative flex-1 lg:w-80 group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
-                    <input 
-                        type="text" 
-                        placeholder="Test adı veya kodu ara..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-shadow shadow-sm"
-                    />
-                 </div>
-                 
-                 <div className="h-8 w-px bg-slate-200 hidden sm:block mx-1"></div>
-                 
-                 <div className="flex bg-slate-100 p-1 rounded-xl">
-                     <button onClick={() => setTypeFilter('all')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${typeFilter === 'all' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Tümü</button>
-                     <button onClick={() => setTypeFilter('numeric')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${typeFilter === 'numeric' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}><Hash size={12}/> Sayısal</button>
-                     <button onClick={() => setTypeFilter('text')} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${typeFilter === 'text' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}><AlignLeft size={12}/> Metin</button>
-                 </div>
-             </div>
+        <div className="bg-white/80 backdrop-blur-md p-4 rounded-2xl border border-slate-200 shadow-sm sticky top-20 z-20">
+            <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:items-center lg:justify-between">
 
-             <div className="flex items-center gap-2 w-full lg:w-auto justify-end flex-wrap">
-                  {/* Hızlı Şablon Ekle */}
-                  <div className="relative">
-                      <button
-                          onClick={() => setShowPresetMenu(!showPresetMenu)}
-                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-100 transition-all"
-                          title="Hazır test paneli ekle"
-                      >
-                          <Zap size={14} />
-                          Şablon Ekle
-                      </button>
-                      {showPresetMenu && (
-                          <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-slate-200 shadow-xl py-2 z-50 w-56 animate-in fade-in slide-in-from-top-2">
-                              {PRESET_CATEGORIES.map(cat => (
-                                  <button
-                                      key={cat.label}
-                                      onClick={() => addPreset(cat.tests)}
-                                      className="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
-                                  >
-                                      <span>{cat.icon}</span>
-                                      {cat.label}
-                                      <span className="ml-auto text-[10px] text-slate-400">{cat.tests.length} test</span>
-                                  </button>
-                              ))}
-                          </div>
-                      )}
-                  </div>
+                {/* ── SOL: Arama + Filtre ── */}
+                <div className="flex items-center gap-3 flex-1 lg:flex-initial">
+                    <div className="relative flex-1 lg:w-72 group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                        <input
+                            type="text"
+                            placeholder="Test adı veya kodu ara..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-shadow shadow-sm"
+                        />
+                    </div>
+                    <div className="flex bg-slate-100 p-1 rounded-xl shrink-0">
+                        <button onClick={() => setTypeFilter('all')} className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${typeFilter === 'all' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>Tümü</button>
+                        <button onClick={() => setTypeFilter('numeric')} className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${typeFilter === 'numeric' ? 'bg-white shadow-sm text-blue-700' : 'text-slate-500 hover:text-slate-700'}`}><Hash size={12}/> Sayısal</button>
+                        <button onClick={() => setTypeFilter('text')} className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${typeFilter === 'text' ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}><AlignLeft size={12}/> Metin</button>
+                    </div>
+                </div>
 
-                  <button onClick={expandAll} className="text-xs font-bold text-slate-500 hover:text-blue-600 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-                      + Tümünü Aç
-                  </button>
-                   <button onClick={collapseAll} className="text-xs font-bold text-slate-500 hover:text-blue-600 px-3 py-2 rounded-lg hover:bg-slate-100 transition-colors">
-                      - Tümünü Kapat
-                  </button>
+                {/* ── SAĞ: Aksiyonlar ── */}
+                <div className="flex items-center gap-2 flex-wrap justify-end">
 
-                  <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+                    {/* Görünüm kontrolleri */}
+                    <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-100">
+                        <button onClick={expandAll} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition-all" title="Tüm panelleri aç">
+                            <ChevronDown size={14} strokeWidth={2.5}/> Aç
+                        </button>
+                        <button onClick={collapseAll} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition-all" title="Tüm panelleri kapat">
+                            <ChevronRight size={14} strokeWidth={2.5}/> Kapat
+                        </button>
+                    </div>
 
-                  <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 rounded-lg transition-all" title="Test havuzunu JSON olarak dışa aktar">
-                      <Download size={14} />
-                  </button>
-                  <button onClick={() => importFileRef.current?.click()} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-600 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 rounded-lg transition-all" title="JSON dosyasından test havuzu içe aktar">
-                      <Upload size={14} />
-                  </button>
-                  <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+                    {/* İçe/Dışa aktarma */}
+                    <div className="flex items-center gap-1 bg-slate-50 rounded-xl p-1 border border-slate-100">
+                        <button onClick={handleExport} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition-all" title="Test havuzunu JSON olarak dışa aktar">
+                            <Download size={14}/> Dışa
+                        </button>
+                        <button onClick={() => importFileRef.current?.click()} className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition-all" title="JSON dosyasından test havuzu içe aktar">
+                            <Upload size={14}/> İçe
+                        </button>
+                        <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImport} />
+                    </div>
 
-                  <button 
-                    onClick={handleAddRootTest}
-                    className="ml-1 flex items-center gap-2 text-white bg-slate-900 hover:bg-slate-800 font-bold text-sm px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-slate-200 hover:-translate-y-0.5"
-                >
-                    <Plus size={18} />
-                    Yeni Test Ekle
-                </button>
-             </div>
+                    {/* Şablon Ekle */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowPresetMenu(!showPresetMenu)}
+                            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-indigo-100 transition-all"
+                            title="Hazır test paneli ekle"
+                        >
+                            <Zap size={14} />
+                            Şablon
+                        </button>
+                        {showPresetMenu && (
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl border border-slate-200 shadow-xl py-2 z-50 w-56 animate-in fade-in slide-in-from-top-2">
+                                {PRESET_CATEGORIES.map(cat => (
+                                    <button
+                                        key={cat.label}
+                                        onClick={() => addPreset(cat.tests)}
+                                        className="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors flex items-center gap-2"
+                                    >
+                                        <span>{cat.icon}</span>
+                                        {cat.label}
+                                        <span className="ml-auto text-[10px] text-slate-400">{cat.tests.length} test</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Birincil aksiyon */}
+                    <button
+                        onClick={handleAddRootTest}
+                        className="flex items-center gap-2 text-white bg-blue-600 hover:bg-blue-700 font-bold text-sm px-4 py-2 rounded-xl transition-all shadow-md shadow-blue-200 active:scale-95"
+                    >
+                        <Plus size={16} />
+                        Yeni Test
+                    </button>
+                </div>
+            </div>
         </div>
 
         {/* DOĞRULAMA UYARILARI */}
@@ -768,8 +846,9 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
             <table className="w-full text-sm text-left">
             <thead className="bg-slate-50/80 text-slate-500 font-bold border-b border-slate-200 text-xs uppercase tracking-wider backdrop-blur-sm">
                 <tr>
-                <th className="px-6 py-4 w-[33%] pl-10">Test Adı / Kod</th>
-                <th className="px-4 py-4 w-[13%]">Veri Tipi</th>
+                <th className="px-6 py-4 w-[28%] pl-10">Test Adı / Kod</th>
+                <th className="px-4 py-4 w-[12%]">Kategori</th>
+                <th className="px-4 py-4 w-[10%]">Veri Tipi</th>
                 <th className="px-4 py-4 w-[8%] text-center">Birim</th>
                 <th className="px-4 py-4 w-[18%] text-center">Referans Aralığı</th>
                 <th className="px-4 py-4 w-[13%] text-center">Liste Fiyatı</th>
@@ -799,7 +878,7 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
                     ))
                 ) : (
                     <tr>
-                        <td colSpan={5} className="py-24 text-center text-slate-400 bg-slate-50/30">
+                        <td colSpan={7} className="py-24 text-center text-slate-400 bg-slate-50/30">
                             <div className="flex flex-col items-center justify-center">
                                 <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
                                     <Search className="opacity-20 text-slate-800" size={40} />
@@ -863,6 +942,269 @@ export const TestConfig: React.FC<TestConfigProps> = ({ tests, onUpdateTests }) 
           onConfirm={() => setImportError(null)}
           onCancel={() => setImportError(null)}
       />
+
+      {/* --- NEW TEST MODAL --- */}
+      {newTestModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setNewTestModal(false)}>
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                  <div className="p-5 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10">
+                      <h3 className="font-bold text-base flex items-center gap-2"><Plus size={18} className="text-blue-400"/> Yeni {isPanel ? 'Panel' : 'Test'} Ekle</h3>
+                      <button onClick={() => setNewTestModal(false)} className="text-slate-400 hover:text-white transition-colors p-1">
+                          <RotateCcw size={18}/>
+                      </button>
+                  </div>
+
+                  <div className="p-5 space-y-4">
+
+                      {/* Mod seçici: Test / Panel */}
+                      <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
+                          <button
+                              type="button"
+                              onClick={() => { setIsPanel(false); setSubParams([{ name: '', unit: '', min: '', max: '' }]); }}
+                              className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${!isPanel ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                          >
+                              <Hash size={13}/> Tek Test
+                          </button>
+                          <button
+                              type="button"
+                              onClick={() => setIsPanel(true)}
+                              className={`flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${isPanel ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+                          >
+                              <Layers size={13}/> Panel (Alt Parametreli)
+                          </button>
+                      </div>
+
+                      {/* Test/Panel Adı + Otomatik tamamlama */}
+                      <div className="relative">
+                          <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">
+                              {isPanel ? 'Panel Adı *' : 'Test Adı *'}
+                          </label>
+                          <input
+                              type="text"
+                              value={newTestForm.name}
+                              onChange={e => setNewTestForm(p => ({ ...p, name: e.target.value }))}
+                              className={`w-full border rounded-xl text-sm focus:ring-2 p-2.5 bg-slate-50 focus:bg-white transition-all font-medium ${isDuplicateName ? 'border-amber-400 focus:ring-amber-400 focus:border-amber-400' : 'border-slate-200 focus:ring-blue-500 focus:border-blue-500'}`}
+                              placeholder={isPanel ? 'Örn: Hemogram' : 'Örn: Glikoz'}
+                              autoFocus
+                          />
+                          {/* Öneri listesi */}
+                          {nameSuggestions.length > 0 && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden">
+                                  {nameSuggestions.map(s => (
+                                      <button
+                                          key={s}
+                                          type="button"
+                                          onClick={() => setNewTestForm(p => ({ ...p, name: s }))}
+                                          className="w-full text-left px-3 py-2 text-xs font-medium text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2"
+                                      >
+                                          <Search size={11} className="text-slate-300"/> {s}
+                                      </button>
+                                  ))}
+                              </div>
+                          )}
+                          {/* Tekrar uyarısı */}
+                          {isDuplicateName && (
+                              <p className="text-[10px] text-amber-600 font-bold mt-1 flex items-center gap-1">
+                                  <AlertTriangle size={11}/> Bu isimde bir test zaten var
+                              </p>
+                          )}
+                      </div>
+
+                      {/* Kategori */}
+                      <div>
+                          <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Kategori</label>
+                          <select
+                              value={newTestForm.category}
+                              onChange={e => setNewTestForm(p => ({ ...p, category: e.target.value }))}
+                              className="w-full border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-2.5 bg-slate-50 focus:bg-white transition-all font-medium cursor-pointer"
+                          >
+                              {TEST_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                      </div>
+
+                      {/* ── TEK TEST MODU ── */}
+                      {!isPanel && (
+                          <>
+                              <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Veri Tipi</label>
+                                      <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
+                                          <button
+                                              type="button"
+                                              onClick={() => setNewTestForm(p => ({ ...p, type: 'numeric' }))}
+                                              className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold transition-all ${newTestForm.type === 'numeric' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                          >
+                                              <Hash size={12}/> Sayısal
+                                          </button>
+                                          <button
+                                              type="button"
+                                              onClick={() => setNewTestForm(p => ({ ...p, type: 'text' }))}
+                                              className={`flex items-center justify-center gap-1 py-2 rounded-lg text-xs font-bold transition-all ${newTestForm.type === 'text' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}
+                                          >
+                                              <AlignLeft size={12}/> Metin
+                                          </button>
+                                      </div>
+                                  </div>
+                                  <div>
+                                      <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Birim</label>
+                                      <input
+                                          type="text"
+                                          value={newTestForm.unit}
+                                          onChange={e => setNewTestForm(p => ({ ...p, unit: e.target.value }))}
+                                          className="w-full border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-2.5 bg-slate-50 focus:bg-white transition-all font-medium"
+                                          placeholder="mg/dL"
+                                      />
+                                  </div>
+                              </div>
+
+                              {newTestForm.type === 'numeric' && (
+                                  <div className="grid grid-cols-2 gap-3">
+                                      <div>
+                                          <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Min Referans</label>
+                                          <input
+                                              type="number"
+                                              value={newTestForm.min}
+                                              onChange={e => setNewTestForm(p => ({ ...p, min: e.target.value }))}
+                                              className="w-full border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-2.5 bg-slate-50 focus:bg-white transition-all font-medium"
+                                              placeholder="0"
+                                          />
+                                      </div>
+                                      <div>
+                                          <label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Max Referans</label>
+                                          <input
+                                              type="number"
+                                              value={newTestForm.max}
+                                              onChange={e => setNewTestForm(p => ({ ...p, max: e.target.value }))}
+                                              className="w-full border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-2.5 bg-slate-50 focus:bg-white transition-all font-medium"
+                                              placeholder="100"
+                                          />
+                                      </div>
+                                  </div>
+                              )}
+
+                              {/* Referans önizleme kartı */}
+                              {newTestForm.name.trim() && (
+                                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Önizleme</p>
+                                      <div className="flex items-center justify-between">
+                                          <div>
+                                              <p className="text-sm font-bold text-slate-800">{newTestForm.name}</p>
+                                              <p className="text-[10px] text-slate-400 font-mono mt-0.5">#{newTestForm.name.trim().toLowerCase().replace(/\s+/g, '_')}</p>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                              {newTestForm.type === 'numeric' ? (
+                                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-50 border border-blue-100 text-blue-600 px-2 py-1 rounded-lg">
+                                                      <Hash size={10}/> Sayısal
+                                                  </span>
+                                              ) : (
+                                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-slate-100 border border-slate-200 text-slate-600 px-2 py-1 rounded-lg">
+                                                      <AlignLeft size={10}/> Metin
+                                                  </span>
+                                              )}
+                                              {newTestForm.unit && (
+                                                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">{newTestForm.unit}</span>
+                                              )}
+                                          </div>
+                                      </div>
+                                      {newTestForm.type === 'numeric' && (newTestForm.min || newTestForm.max) && (
+                                          <div className="mt-3 pt-3 border-t border-slate-200">
+                                              <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 mb-1">
+                                                  <span>Referans Aralığı</span>
+                                                  <span className="text-emerald-600">{newTestForm.min || '—'} – {newTestForm.max || '—'} {newTestForm.unit}</span>
+                                              </div>
+                                              <div className="relative h-2 bg-slate-200 rounded-full">
+                                                  <div className="absolute h-full bg-emerald-400 rounded-full" style={{ left: '20%', right: '20%' }} />
+                                                  <div className="absolute -top-0.5 w-3 h-3 bg-blue-600 rounded-full shadow" style={{ left: '50%', transform: 'translateX(-50%)' }} />
+                                              </div>
+                                              <div className="flex justify-between text-[9px] text-slate-400 mt-1">
+                                                  <span>Düşük</span><span>Normal</span><span>Yüksek</span>
+                                              </div>
+                                          </div>
+                                      )}
+                                  </div>
+                              )}
+                          </>
+                      )}
+
+                      {/* ── PANEL MODU — alt parametreler ── */}
+                      {isPanel && (
+                          <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                  <label className="text-[11px] font-bold text-slate-500 uppercase">Alt Parametreler ({subParams.filter(s => s.name.trim()).length})</label>
+                                  <button
+                                      type="button"
+                                      onClick={() => setSubParams(prev => [...prev, { name: '', unit: '', min: '', max: '' }])}
+                                      className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                  >
+                                      <Plus size={11}/> Parametre Ekle
+                                  </button>
+                              </div>
+                              {subParams.map((sub, i) => (
+                                  <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-100">
+                                      <input
+                                          type="text"
+                                          value={sub.name}
+                                          onChange={e => setSubParams(prev => prev.map((s, idx) => idx === i ? { ...s, name: e.target.value } : s))}
+                                          className="flex-1 border border-slate-200 rounded-lg text-xs p-2 bg-white focus:ring-1 focus:ring-blue-400 focus:border-blue-400 font-medium"
+                                          placeholder="Parametre adı (örn: WBC)"
+                                      />
+                                      <input
+                                          type="text"
+                                          value={sub.unit}
+                                          onChange={e => setSubParams(prev => prev.map((s, idx) => idx === i ? { ...s, unit: e.target.value } : s))}
+                                          className="w-16 border border-slate-200 rounded-lg text-xs p-2 bg-white focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-center font-medium"
+                                          placeholder="birim"
+                                      />
+                                      <input
+                                          type="number"
+                                          value={sub.min}
+                                          onChange={e => setSubParams(prev => prev.map((s, idx) => idx === i ? { ...s, min: e.target.value } : s))}
+                                          className="w-14 border border-slate-200 rounded-lg text-xs p-2 bg-white focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-center font-medium"
+                                          placeholder="min"
+                                      />
+                                      <input
+                                          type="number"
+                                          value={sub.max}
+                                          onChange={e => setSubParams(prev => prev.map((s, idx) => idx === i ? { ...s, max: e.target.value } : s))}
+                                          className="w-14 border border-slate-200 rounded-lg text-xs p-2 bg-white focus:ring-1 focus:ring-blue-400 focus:border-blue-400 text-center font-medium"
+                                          placeholder="maks"
+                                      />
+                                      {subParams.length > 1 && (
+                                          <button
+                                              type="button"
+                                              onClick={() => setSubParams(prev => prev.filter((_, idx) => idx !== i))}
+                                              className="p-1.5 text-slate-300 hover:text-red-500 rounded-lg transition-colors"
+                                          >
+                                              <Trash2 size={13}/>
+                                          </button>
+                                      )}
+                                  </div>
+                              ))}
+                              {subParams.filter(s => s.name.trim()).length === 0 && (
+                                  <p className="text-[10px] text-slate-400 text-center py-2">En az bir alt parametre girin</p>
+                              )}
+                          </div>
+                      )}
+                  </div>
+
+                  <div className="p-5 pt-0 flex gap-3 sticky bottom-0 bg-white">
+                      <button
+                          onClick={() => setNewTestModal(false)}
+                          className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-bold text-sm transition-all"
+                      >
+                          İptal
+                      </button>
+                      <button
+                          onClick={confirmAddRootTest}
+                          disabled={!newTestForm.name.trim() || (isPanel && subParams.filter(s => s.name.trim()).length === 0)}
+                          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                          <Plus size={16}/> Ekle
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

@@ -65,6 +65,7 @@ interface RecordsTableProps {
   onToggleReview: (id: string) => void;
   onDeleteRecord: (id: string) => void;
   onOpenRecord: (record: PatientRecord) => void;
+  onOpenPdf: (record: PatientRecord) => void;
   onClearRecords: (companyId: string) => void;
   onLoadDemo: () => void;
 
@@ -90,7 +91,7 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
   sortConfig, onSort,
   selectedRecordIds, onSelectAll, onSelectRow, onClearSelection, onBulkDelete, onBulkExport,
   editingCell, editValue, onEditValueChange, onStartEdit, onSaveEdit, onCancelEdit,
-  onToggleReview, onDeleteRecord, onOpenRecord, onClearRecords, onLoadDemo,
+  onToggleReview, onDeleteRecord, onOpenRecord, onOpenPdf, onClearRecords, onLoadDemo,
   currentPage, totalPages, itemsPerPage, onPageChange
 }) => {
   const visibleTests = selectedCompany.tests.filter(t => !hiddenColumns.has(t.id));
@@ -239,6 +240,7 @@ export const RecordsTable: React.FC<RecordsTableProps> = ({
                   <td className={`px-2 ${isCompact ? 'py-2' : 'py-4'} text-center relative`}>
                       <div className="flex flex-col gap-1 items-center">
                           <button onClick={() => onOpenRecord(record)} className="text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors p-1.5" title="Detaylı İncele"><Eye size={16} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); onOpenPdf(record); }} className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors p-1.5" title="PDF'i Aç"><FileText size={16} /></button>
                           <button onClick={(e) => { e.stopPropagation(); onDeleteRecord(record.id); }} className="text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all p-1.5" title="Kaydı Sil"><Trash2 size={16} /></button>
                           {record.doctorNotes && <div className="text-blue-500 p-1" title="Doktor Notu Var"><StickyNote size={14} /></div>}
                       </div>

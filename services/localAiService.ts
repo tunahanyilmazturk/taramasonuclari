@@ -96,10 +96,14 @@ const extractPatientName = (lines: string[]): string => {
     return '';
 };
 
+/** İsim/alan sonundaki box-drawing ve pipe karakterlerini temizler */
+const cleanFieldChars = (s: string): string =>
+    s.replace(/[\u2500-\u257F|│┃]/g, '').replace(/\s+/g, ' ').trim();
+
 const extractMetadata = (lines: string[]) => {
-    const patientName = extractPatientName(lines);
-    const registrationNumber = extractField(lines, META.regKeys);
-    const jobTitle = extractField(lines, META.jobKeys);
+    const patientName = cleanFieldChars(extractPatientName(lines));
+    const registrationNumber = cleanFieldChars(extractField(lines, META.regKeys));
+    const jobTitle = cleanFieldChars(extractField(lines, META.jobKeys));
 
     // Tarih: önce etiketli alanlara bak, sonra genel date pattern'i tara
     let date = extractField(lines, META.dateKeys);
@@ -218,7 +222,9 @@ const buildAliases = (test: TestDefinition): string[] => {
         'tit_ph': ['ph', 'idrar ph'],
         'tit_dansite': ['dansite', 'density', 'idrar dansite', 'yoğunluk', 'specific gravity'],
         'tit_lokosit': ['lökosit (kimyasal)', 'lökosit', 'idrar lökosit', 'leukocyte'],
-        'tit_mikroskopi': ['idrar mikroskopi', 'idrar mikroskopisi', 'mikroskopi', 'sediment']
+        'tit_mikroskopi': ['idrar mikroskopi', 'idrar mikroskopisi', 'mikroskopi', 'sediment'],
+        'pnomokonyoz_1': ['pnmokonyoz', 'pnömokonyoz', 'pnomokonyoz', 'ilo', 'radyografi okuma', 'dier yorumlar', 'diğer yorumlar', '4d', '4d. diğer yorumlar'],
+        'pnomokonyoz_2': ['pnmokonyoz', 'pnömokonyoz', 'pnomokonyoz', 'ilo', 'radyografi okuma', 'dier yorumlar', 'diğer yorumlar', '4d', '4d. diğer yorumlar']
     };
 
     const testKeyLower = normalizeTr(test.key);
@@ -436,6 +442,28 @@ const extractTextValue = (text: string, test: TestDefinition, suppressFallback =
         if (pathMatch) return `SFT Bulgusu: ${pathMatch[0]}`;
     }
 
+    // Pnömokonyoz — ILO radyografi okuma raporu
+    // "4D. DİĞER YORUMLAR" kısmındaki metni al
+    if (test.key.includes('pnomokonyoz')) {
+        // "pnömokonyoz açısından" ifadesini ara — bu genelde sonuç satırıdır
+        if (includesTr(norm, 'pnömokonyoz') || includesTr(norm, 'pnmokonyoz') || includesTr(norm, 'pnomokonyoz')) {
+            // "normal sınırlarda" varsa normal kabul et
+            if (includesTr(norm, 'normal') && (includesTr(norm, 'sınır') || includesTr(norm, 'sinir'))) {
+                return 'Pnömokonyoz açısından normal sınırlarda akciğer grafisi';
+            }
+            // Patoloji varsa metni al
+            if (includesTr(norm, 'bulgu') || includesTr(norm, 'patoloji') || includesTr(norm, 'anormallik') ||
+                includesTr(norm, 'opasite') || includesTr(norm, 'plak') || includesTr(norm, 'kalınla')) {
+                // "4D" ve "DİĞER YORUMLAR" başlığını temizle
+                const result = cleaned.replace(/^4d[.\s]*/i, '').replace(/diger yorumlar/i, '').replace(/diğer yorumlar/i, '').trim();
+                if (result) return result;
+            }
+            // Genel durum — metni temizle ve döndür
+            const result = cleaned.replace(/^4d[.\s]*/i, '').replace(/diger yorumlar/i, '').replace(/diğer yorumlar/i, '').trim();
+            if (result && result.length > 5) return result;
+        }
+    }
+
     // Genel metin — temizlenmiş kalan metni döndür (kısa olanı)
     if (!suppressFallback && cleaned.length < 80) return cleaned;
     return undefined;
@@ -467,7 +495,8 @@ export const analyzeMedicalTextLocal = (
             test.key.includes('goz') || test.key.includes('ekg') || test.key.includes('odyometri') ||
             test.key.includes('odyo') || test.key.includes('akciger') || test.key.includes('thorax') ||
             test.key.includes('sft') || test.key.includes('solunum') || test.key.includes('kulturu') ||
-            test.key.includes('gaita') || test.key.includes('tetanoz') || test.key.includes('kan_grubu')
+            test.key.includes('gaita') || test.key.includes('tetanoz') || test.key.includes('kan_grubu') ||
+            test.key.includes('pnomokonyoz')
         );
 
         let found = false;

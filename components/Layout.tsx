@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Activity, LayoutDashboard, Building2, Menu, ChevronLeft, ChevronRight, ChevronDown, LogOut, FlaskConical, Settings as SettingsIcon, Search, Bell, FileText, UserCheck, Stethoscope, CalendarDays, Package, HardHat, Home, type LucideIcon } from 'lucide-react';
-import { User, Company, PatientRecord, OrgInfo } from '../types';
+import { Activity, LayoutDashboard, Building2, Menu, ChevronLeft, ChevronRight, ChevronDown, LogOut, FlaskConical, Settings as SettingsIcon, Search, Bell, FileText, UserCheck, Stethoscope, CalendarDays, Package, HardHat, Home, Sun, Moon, type LucideIcon } from 'lucide-react';
+import { User, Company, PatientRecord, OrgInfo, AppearanceSettings } from '../types';
 import { storageService } from '../services/storageService';
 import { updateAppearance } from '../services/appearance';
+import { getImageUrl } from '../services/logoStorage';
 
 interface SidebarStats {
     records: number;
@@ -58,6 +59,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   const [isMobileOpen, setMobileOpen] = useState(false);
   const [isDesktopCollapsed, setDesktopCollapsed] = useState(() => storageService.getAppearance().sidebarCollapsed);
   const [edgeTooltip, setEdgeTooltip] = useState<{ label: string; badge?: number; top: number } | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  // Kurum logosu varsa yükle
+  useEffect(() => {
+    let cancelled = false;
+    const loadLogo = async () => {
+      if (org?.logoKey) {
+        const url = await getImageUrl(org.logoKey);
+        if (!cancelled && url) setLogoUrl(url);
+      } else if (!cancelled) {
+        setLogoUrl(null);
+      }
+    };
+    loadLogo();
+    return () => { cancelled = true; };
+  }, [org?.logoKey]);
 
   // Topbar state
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,6 +86,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
 
   const isSuperAdmin = currentUser.role === 'super_admin';
   const pageMeta = PAGE_META[activeTab] ?? { title: 'Sonuçlar', group: 'Genel' };
+
+  // Tema — topbar'dan hızlı geçiş (light ↔ dark)
+  const [appearance, setAppearance] = useState<AppearanceSettings>(() => storageService.getAppearance());
+  const toggleTheme = () => {
+    const next = appearance.theme === 'dark' ? 'light' : 'dark';
+    setAppearance(updateAppearance({ theme: next }));
+  };
+  const ThemeIcon = appearance.theme === 'dark' ? Moon : Sun;
+  const themeLabel = appearance.theme === 'dark' ? 'Koyu' : 'Açık';
 
   // Canlı saat — dakikada bir güncellenir
   useEffect(() => {
@@ -233,8 +259,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           <a href="#/home" className="flex items-center gap-3.5">
             <div className="relative group">
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl blur-md opacity-40 group-hover:opacity-60 transition-opacity duration-500"></div>
-                <div className="relative w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-inner border border-white/10 shrink-0">
-                    <Activity size={22} className="drop-shadow-sm" />
+                <div className="relative w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center text-white shadow-inner border border-white/10 shrink-0 overflow-hidden">
+                    {logoUrl ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Activity size={22} className="drop-shadow-sm" />}
                 </div>
             </div>
             {!isDesktopCollapsed && (
@@ -350,7 +376,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                 <Menu size={20} />
             </button>
             <div className="md:hidden flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white"><Activity size={17}/></div>
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white overflow-hidden">{logoUrl ? <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" /> : <Activity size={17}/>}</div>
                 <span className="font-bold text-slate-800">{org?.name || 'HanTech'}</span>
             </div>
 
@@ -435,6 +461,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                     {now.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' })}
                 </span>
             </div>
+
+            {/* Tema değiştir */}
+            <button
+                onClick={toggleTheme}
+                className="relative p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-all group"
+                title={`Tema: ${themeLabel} (değiştirmek için tıkla)`}
+            >
+                <ThemeIcon size={18} />
+                <span className="hidden lg:block absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-slate-400 uppercase tracking-wide whitespace-nowrap pointer-events-none">{themeLabel}</span>
+            </button>
 
             {/* Bildirimler */}
             <div className="relative">
@@ -528,6 +564,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                                 <p className="text-[10px] text-slate-400 font-mono">@{currentUser.username}</p>
                             </div>
                             <div className="py-1.5">
+                                <button
+                                    onClick={() => { window.location.hash = '/settings/profile'; setUserMenuOpen(false); }}
+                                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                                >
+                                    <UserCheck size={14} className="text-slate-400" /> Profilim
+                                </button>
                                 <button
                                     onClick={() => goTo('settings')}
                                     className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"

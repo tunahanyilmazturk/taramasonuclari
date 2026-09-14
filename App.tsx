@@ -17,6 +17,7 @@ import { storageService } from './services/storageService';
 import { useHashRoute, resolveRoute } from './utils/router';
 import { DEFAULT_TESTS } from './constants';
 import { generateDemoData } from './services/demoDataService';
+import { deletePdf as deletePdfBlob } from './services/pdfStorage';
 import { X, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 
 // Auto-Logout Time in Milliseconds (10 Minutes)
@@ -104,13 +105,13 @@ function App() {
   // Auth Handlers
   const handleLogin = (user: User) => {
     setCurrentUser(user);
-    storageService.addLog(user, 'LOGIN', 'Kullanıcı giriş yaptı.');
+    storageService.addLog(user, 'LOGIN', 'Kullanıcı giriş yaptı.', { category: 'auth', severity: 'success' });
     addNotification('success', `Hoşgeldiniz, ${user.fullName}`);
   };
 
   const handleLogout = useCallback(() => {
     if (currentUser) {
-        storageService.addLog(currentUser, 'LOGOUT', 'Kullanıcı çıkış yaptı.');
+        storageService.addLog(currentUser, 'LOGOUT', 'Kullanıcı çıkış yaptı.', { category: 'auth', severity: 'info' });
     }
     storageService.logout();
     setCurrentUser(null);
@@ -126,7 +127,7 @@ function App() {
       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
 
       logoutTimerRef.current = setTimeout(() => {
-          if (currentUser) storageService.addLog(currentUser, 'AUTO_LOGOUT', 'İnaktiflik nedeniyle otomatik çıkış.');
+          if (currentUser) storageService.addLog(currentUser, 'AUTO_LOGOUT', 'İnaktiflik nedeniyle otomatik çıkış.', { category: 'auth', severity: 'warning' });
           handleLogout();
           addNotification('info', 'Güvenlik gereği, uzun süre işlem yapmadığınız için oturumunuz kapatıldı.');
       }, AUTO_LOGOUT_TIME);
@@ -163,7 +164,7 @@ function App() {
     if (newRecords.length === 1) {
         addNotification('success', `${newRecords[0].patientName} eklendi.`);
     } else {
-        if(currentUser) storageService.addLog(currentUser, 'BATCH_UPLOAD', `${newRecords.length} adet kayıt yüklendi.`);
+        if(currentUser) storageService.addLog(currentUser, 'BATCH_UPLOAD', `${newRecords.length} adet kayıt yüklendi.`, { category: 'data', severity: 'success' });
         addNotification('success', `${newRecords.length} kayıt başarıyla işlendi.`);
     }
   };
@@ -183,7 +184,8 @@ function App() {
     const record = records.find(r => r.id === recordId);
     const doDelete = () => {
       setRecords(prev => prev.filter(r => r.id !== recordId));
-      if(currentUser && record) storageService.addLog(currentUser, 'DELETE_RECORD', `${record.patientName} kaydı silindi.`);
+      deletePdfBlob(recordId); // IndexedDB'den PDF'i de temizle
+      if(currentUser && record) storageService.addLog(currentUser, 'DELETE_RECORD', `${record.patientName} kaydı silindi.`, { category: 'data', severity: 'danger' });
       addNotification('success', 'Kayıt silindi.');
     };
     if (skipConfirm) {
@@ -201,10 +203,18 @@ function App() {
       `"${company?.name || 'Bu firma'}" için ${count} kayıt silinecek. Emin misiniz?`,
       () => {
         setRecords(prev => prev.filter(r => r.companyId !== companyId));
-        if(currentUser && company) storageService.addLog(currentUser, 'CLEAR_RECORDS', `${company.name} firmasının ${count} kaydı temizlendi.`);
+        if(currentUser && company) storageService.addLog(currentUser, 'CLEAR_RECORDS', `${company.name} firmasının ${count} kaydı temizlendi.`, { category: 'data', severity: 'danger' });
         addNotification('success', 'Tüm kayıtlar temizlendi.');
       }
     );
+  };
+
+  // Demo kayıtları temizle (demo_rec_* ve mock_rec_* ID'li kayıtlar)
+  const handleClearDemoRecords = (companyId: string): number => {
+    const demoRecs = records.filter(r => r.companyId === companyId && (r.id.startsWith('demo_rec_') || r.id.startsWith('mock_rec_')));
+    if (demoRecs.length === 0) return 0;
+    setRecords(prev => prev.filter(r => !(r.companyId === companyId && (r.id.startsWith('demo_rec_') || r.id.startsWith('mock_rec_')))));
+    return demoRecs.length;
   };
 
   const handleRestoreState = (state: AppState) => {
@@ -334,6 +344,7 @@ function App() {
           onToggleReview={handleToggleReview}
           onDeleteRecord={handleDeleteRecord}
           onClearRecords={handleClearRecords}
+          onClearDemoRecords={handleClearDemoRecords}
           onUpdateCompanyTests={(companyId, tests) => {
               setCompanies(prev => prev.map(c => c.id === companyId ? { ...c, tests } : c));
           }}
@@ -344,7 +355,7 @@ function App() {
         />
       )}
       
-      {activeTab === 'screenings' && <Screenings companies={companies} allTests={masterTests} />}
+      {activeTab === 'screenings' && <Screenings companies={companies} allTests={masterTests} initialOpenCreate={hash === 'screenings/new'} onNavigate={navigate} onBack={goBack} />}
       {activeTab === 'quotes' && (
         <Quotes
           companies={companies}
@@ -355,7 +366,7 @@ function App() {
           onBack={goBack}
         />
       )}
-      {activeTab === 'calendar' && <Calendar onGoToDashboard={() => navigate('dashboard')} />}
+      {activeTab === 'calendar' && <Calendar companies={companies} onGoToDashboard={() => navigate('dashboard')} onNavigate={navigate} />}
       {activeTab === 'equipment' && <Equipment onGoToDashboard={() => navigate('dashboard')} />}
       {activeTab === 'team' && <Team onGoToDashboard={() => navigate('dashboard')} />}
 

@@ -3,12 +3,13 @@ import { TestDefinition, PatientRecord, ResultStatus, ExtractedResult, Extractio
 import { flattenTests, includesTr, normalizeTr } from "../utils/lab";
 import { aiConfigService } from "./aiConfigService";
 import { analyzeMedicalTextLocal, generateMedicalSummaryLocal } from "./localAiService";
+import { analyzeMedicalTextOpenRouter, generateMedicalSummaryOpenRouter, testOpenRouterConnection } from "./openrouterService";
 
 // @google/genai büyük bir SDK — ilk AI çağrısında lazy-load edilir
 const getAiClient = async (): Promise<GoogleGenAI> => {
   const apiKey = aiConfigService.getApiKey();
   if (!apiKey) {
-    throw new Error("API Key is missing");
+    throw new Error("Gemini API anahtarı tanımlı değil. Ayarlar → AI & API bölümünden anahtarınızı girin veya Yerel Sistem'e geçin.");
   }
   const { GoogleGenAI } = await import("@google/genai");
   return new GoogleGenAI({ apiKey });
@@ -16,6 +17,13 @@ const getAiClient = async (): Promise<GoogleGenAI> => {
 
 // Ayarlar sayfasındaki "Bağlantıyı Test Et" için minimal çağrı
 export const testAiConnection = async (): Promise<string> => {
+    const provider = aiConfigService.getProvider();
+    if (provider === 'openrouter') {
+        return testOpenRouterConnection();
+    }
+    if (provider === 'local') {
+        return 'Yerel sistem aktif — API gerekmez.';
+    }
     const ai = await getAiClient();
     const response = await ai.models.generateContent({
         model: aiConfigService.getModel('comment'),
@@ -165,6 +173,13 @@ const analyzeMedicalTextGemini = async (
         Look for the 'Yorum', 'Sonuç', 'Tıbbi Rapor' or 'Değerlendirme' lines.
         - If it says "Normal Spirometri", "Normal", "Kabul edilebilir" or shows normal curve, return "Normal Spirometri".
         - If there is a pathology (e.g., "Obstrüktif", "Restriktif", "Küçük hava yolu"), extract that summary text.`;
+    }
+
+    if (t.key.includes('pnomokonyoz')) {
+        return `- "${t.name}": This is an ILO Pneumoconiosis X-Ray reading report.
+        Look for section "4D. DİĞER YORUMLAR" (Other Comments) at the bottom of the report.
+        Extract the text written under that section — it typically says something like "Pnömokonyoz açısından normal sınırlarda akciğer grafisi" or describes findings.
+        Return the full text found in that section.`;
     }
 
     // Specific logic for Hepatitis Card Tests
@@ -481,11 +496,15 @@ const generateMedicalSummaryGemini = async (record: PatientRecord): Promise<stri
 export const analyzeMedicalText = async (
   text: string,
   tests: TestDefinition[],
-  retries = 5
+  retries = 5,
+  forceLocal = false
 ): Promise<ExtractionReport> => {
   const provider = aiConfigService.getProvider();
-  if (provider === 'local') {
+  if (provider === 'local' || forceLocal) {
     return Promise.resolve(analyzeMedicalTextLocal(text, tests));
+  }
+  if (provider === 'openrouter') {
+    return analyzeMedicalTextOpenRouter(text, tests, retries);
   }
   return analyzeMedicalTextGemini(text, tests, retries);
 };
@@ -494,6 +513,9 @@ export const generateMedicalSummary = async (record: PatientRecord): Promise<str
   const provider = aiConfigService.getProvider();
   if (provider === 'local') {
     return Promise.resolve(generateMedicalSummaryLocal(record));
+  }
+  if (provider === 'openrouter') {
+    return generateMedicalSummaryOpenRouter(record);
   }
   return generateMedicalSummaryGemini(record);
 };

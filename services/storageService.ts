@@ -1,4 +1,4 @@
-import { Company, TestDefinition, PatientRecord, User, AuditLog, ReportSettings, Screening, Quote, CalendarEvent, Equipment, TeamMember, OrgInfo, AppearanceSettings } from '../types';
+import { Company, TestDefinition, PatientRecord, User, AuditLog, LogCategory, LogSeverity, ReportSettings, Screening, Quote, CalendarEvent, Equipment, TeamMember, OrgInfo, AppearanceSettings, Role, APP_MODULES, ModulePermissions } from '../types';
 import { DEFAULT_TESTS } from '../constants';
 import { DEFAULT_ADMIN_HASH } from '../utils/security';
 
@@ -18,7 +18,8 @@ const KEYS = {
   ORG_INFO: 'mediscan_org_info',
   APPEARANCE: 'mediscan_appearance',
   QUOTE_DRAFT: 'mediscan_quote_draft',
-  SCREENING_DRAFT: 'mediscan_screening_draft'
+  SCREENING_DRAFT: 'mediscan_screening_draft',
+  ROLES: 'mediscan_roles'
 };
 
 export const DEFAULT_REPORT_SETTINGS: ReportSettings = {
@@ -57,21 +58,92 @@ export const DEMO_ACCOUNTS: User[] = [
     username: 'admin',
     password: DEFAULT_ADMIN_HASH, // Stored as SHA-256 Hash for '123'
     fullName: 'Sistem Yöneticisi',
-    role: 'super_admin'
+    role: 'super_admin',
+    email: 'admin@hantech.com',
+    phone: '',
+    jobTitle: 'Sistem Yöneticisi',
+    active: true
   },
   {
     id: 'doktor_002',
     username: 'doktor',
     password: DEFAULT_ADMIN_HASH, // Stored as SHA-256 Hash for '123'
     fullName: 'Dr. Mehmet Özkan (İşyeri Hekimi)',
-    role: 'super_admin'
+    role: 'user',
+    roleId: 'role_doktor',
+    email: 'doktor@hantech.com',
+    phone: '',
+    jobTitle: 'İşyeri Hekimi',
+    active: true
   },
   {
     id: 'personel_003',
     username: 'personel',
     password: DEFAULT_ADMIN_HASH, // Stored as SHA-256 Hash for '123'
     fullName: 'Ayşe Demir (Sağlık Personeli)',
-    role: 'user'
+    role: 'user',
+    roleId: 'role_personel',
+    email: 'personel@hantech.com',
+    phone: '',
+    jobTitle: 'Sağlık Personeli',
+    active: true
+  }
+];
+
+// Varsayılan roller — tüm modüllere view izni, sadece sonuçlara edit
+const defaultPermissions = (): ModulePermissions =>
+  APP_MODULES.reduce((acc, m) => {
+    acc[m] = 'view';
+    return acc;
+  }, {} as ModulePermissions);
+
+const doktorPermissions = (): ModulePermissions => {
+  const p = defaultPermissions();
+  p.dashboard = 'edit';
+  p.screenings = 'edit';
+  p.calendar = 'view';
+  p.quotes = 'view';
+  p.reports = 'view';
+  p.equipment = 'view';
+  p.team = 'view';
+  p.companies = 'view';
+  p.config = 'view';
+  return p;
+};
+
+const personelPermissions = (): ModulePermissions => {
+  const p = defaultPermissions();
+  p.dashboard = 'view';
+  p.screenings = 'view';
+  p.calendar = 'view';
+  p.quotes = 'none';
+  p.equipment = 'none';
+  p.team = 'none';
+  p.companies = 'none';
+  p.config = 'none';
+  p.reports = 'none';
+  p.home = 'view';
+  return p;
+};
+
+export const DEFAULT_ROLES: Role[] = [
+  {
+    id: 'role_doktor',
+    name: 'Doktor',
+    description: 'Sonuçları düzenleyebilir, tarama planlayabilir',
+    color: 'purple',
+    permissions: doktorPermissions(),
+    isSystem: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'role_personel',
+    name: 'Sağlık Personeli',
+    description: 'Sadece görüntüleme — sonuçları ve takvimi görebilir',
+    color: 'blue',
+    permissions: personelPermissions(),
+    isSystem: true,
+    createdAt: new Date().toISOString()
   }
 ];
 
@@ -205,6 +277,25 @@ export const storageService = {
     localStorage.setItem(KEYS.USERS, JSON.stringify(users));
   },
 
+  // --- ROLE METHODS ---
+  getRoles: (): Role[] => {
+    const data = localStorage.getItem(KEYS.ROLES);
+    if (!data) {
+      localStorage.setItem(KEYS.ROLES, JSON.stringify(DEFAULT_ROLES));
+      return DEFAULT_ROLES;
+    }
+    try {
+      return JSON.parse(data) as Role[];
+    } catch {
+      localStorage.setItem(KEYS.ROLES, JSON.stringify(DEFAULT_ROLES));
+      return DEFAULT_ROLES;
+    }
+  },
+
+  saveRoles: (roles: Role[]) => {
+    localStorage.setItem(KEYS.ROLES, JSON.stringify(roles));
+  },
+
   // Session Management
   login: (user: User) => {
     localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
@@ -218,16 +309,18 @@ export const storageService = {
   },
 
   // --- AUDIT LOGGING ---
-  addLog: (user: User, action: string, details: string) => {
+  addLog: (user: User, action: string, details: string, opts?: { category?: LogCategory; severity?: LogSeverity }) => {
     const newLog: AuditLog = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       userId: user.id,
       username: user.username,
       action,
       details,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      category: opts?.category,
+      severity: opts?.severity
     };
-    
+
     const logs = storageService.getLogs();
     // Keep only last 1000 logs to prevent storage overflow
     const updatedLogs = [newLog, ...logs].slice(0, 1000);
