@@ -317,12 +317,12 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
 
   // ════════════════════════════════════════════════════
   // SAYFA 2 — TEKLİF KALEMLERİ & MALİ ÖZET
+  // (tek bir stack içinde pageBreak ile — boş sayfa oluşmaz)
   // ════════════════════════════════════════════════════
-
-  content.push({ text: '', pageBreak: 'before' as const });
+  const page2: Content[] = [];
 
   // ── Sayfa 2 başlık bandı ──
-  content.push({
+  page2.push({
     table: {
       widths: ['*'],
       body: [[{
@@ -357,7 +357,7 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
   });
 
   // ── Firma özet şeridi ──
-  content.push({
+  page2.push({
     table: {
       widths: ['auto', '*', 'auto', 'auto'],
       body: [[
@@ -377,8 +377,8 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
   });
 
   // ── Kalem tablosu — sıra no'lu ──
-  content.push({ text: 'TEKLİF KALEMLERİ', style: 'blockLabel', margin: [0, 0, 0, 6] });
-  content.push({
+  page2.push({ text: 'TEKLİF KALEMLERİ', style: 'blockLabel', margin: [0, 0, 0, 6] });
+  page2.push({
     table: {
       headerRows: 1,
       widths: [28, '*', 45, 70, 80],
@@ -409,7 +409,6 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     },
     layout: {
       hLineWidth: (i: number, node: { table: { body: unknown[] } }) => {
-        // Başlık altı ve alt toplam üstü kalın çizgi
         if (i === 1) return 1;
         if (i === node.table.body.length - 1) return 1.5;
         return 0.5;
@@ -458,7 +457,7 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     { text: [{ text: 'KDV Oranı: ', bold: true, color: C.muted }, { text: `%${quote.vatRate}`, color: C.ink }], style: 'muted' }
   ];
 
-  content.push({
+  page2.push({
     columns: [
       {
         width: '*',
@@ -493,7 +492,7 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
 
   // ── Alt not ──
   if (quote.notes) {
-    content.push({
+    page2.push({
       table: {
         widths: ['*'],
         body: [[{
@@ -513,6 +512,9 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
       margin: [0, 0, 0, 0]
     });
   }
+
+  // Sayfa 2 içeriğini tek bir stack olarak pageBreak ile ekle
+  content.push({ stack: page2, pageBreak: 'before' as const });
 
   return {
     pageSize: 'A4',
