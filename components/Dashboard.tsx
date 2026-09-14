@@ -1253,37 +1253,82 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <ArrowLeft size={14} /> Tüm Sonuçlara Dön
           </button>
 
-      {/* WIZARD STEP INDICATOR */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-3 sm:p-4">
-        <div className="flex items-center justify-start sm:justify-center gap-0 overflow-x-auto scrollbar-none">
-          {[
-            { key: 'setup', label: 'Firma & Test', icon: Building2 },
-            { key: 'input', label: 'Veri Girişi', icon: UploadCloud },
-            { key: 'results', label: 'Sonuçlar', icon: CheckCircle2 },
-          ].map((step, idx) => {
-            const isActive = wizardStep === step.key;
-            const isDone = (wizardStep === 'input' && idx === 0) || (wizardStep === 'results' && idx <= 1);
-            return (
-              <React.Fragment key={step.key}>
-                {idx > 0 && <div className={`w-6 sm:w-12 h-0.5 mx-1.5 sm:mx-2 shrink-0 ${isDone || isActive ? 'bg-blue-400' : 'bg-slate-200'}`} />}
-                <button
-                  onClick={() => {
-                    if (step.key === 'setup') setWizardStep('setup');
-                    else if (step.key === 'input' && selectedCompanyId) setWizardStep('input');
-                    else if (step.key === 'results' && companyRecordsBase.length > 0) setWizardStep('results');
-                  }}
-                  className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap shrink-0 ${
-                    isActive ? 'bg-blue-600 text-white shadow-md shadow-blue-200' :
-                    isDone ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' :
-                    'bg-slate-100 text-slate-400'
-                  }`}
-                >
-                  <step.icon size={16} />
-                  {step.label}
-                </button>
-              </React.Fragment>
-            );
-          })}
+      {/* WIZARD STEP INDICATOR + RESULTS TOOLBAR (birleşik kompakt) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-3 sticky top-20 z-20 shadow-sm">
+        {/* Üst satır: step indicator + firma bilgisi */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Step indicator — kompakt */}
+            {[
+              { key: 'setup', label: 'Firma & Test', icon: Building2 },
+              { key: 'input', label: 'Veri Girişi', icon: UploadCloud },
+              { key: 'results', label: 'Sonuçlar', icon: CheckCircle2 },
+            ].map((step, idx) => {
+              const isActive = wizardStep === step.key;
+              const isDone = (wizardStep === 'input' && idx === 0) || (wizardStep === 'results' && idx <= 1);
+              return (
+                <React.Fragment key={step.key}>
+                  {idx > 0 && <div className={`w-4 sm:w-8 h-0.5 shrink-0 ${isDone || isActive ? 'bg-blue-400' : 'bg-slate-200'}`} />}
+                  <button
+                    onClick={() => {
+                      if (step.key === 'setup') setWizardStep('setup');
+                      else if (step.key === 'input' && selectedCompanyId) setWizardStep('input');
+                      else if (step.key === 'results' && companyRecordsBase.length > 0) setWizardStep('results');
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all whitespace-nowrap shrink-0 ${
+                      isActive ? 'bg-blue-600 text-white shadow-sm' :
+                      isDone ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' :
+                      'bg-slate-100 text-slate-400'
+                    }`}
+                  >
+                    <step.icon size={13} />
+                    <span className="hidden sm:inline">{step.label}</span>
+                  </button>
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {/* Sağ taraf: firma adı + butonlar (results step'inde) */}
+          {wizardStep === 'results' && selectedCompany && companyRecordsBase.length > 0 && !isProcessing ? (
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 px-2.5 py-1.5 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg flex items-center justify-center shrink-0"><Building2 size={14} /></div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-800 truncate max-w-[140px]">{selectedCompany.name}</p>
+                  <p className="text-[9px] text-slate-400">{companyRecordsBase.length} kayıt · {selectedTestCount} test</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setNewOpClearFirst(false); setIsNewOperationModalOpen(true); }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-xs transition-all shadow-sm active:scale-95"
+                title="Yeni İşlem"
+              >
+                <Sparkles size={14} />
+                <span className="hidden sm:inline">Yeni İşlem</span>
+              </button>
+              <button
+                onClick={() => setIsClearConfirmOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/80 rounded-lg font-bold text-xs transition-all active:scale-95"
+                title="Temizle"
+              >
+                <RotateCcw size={13} />
+                <span className="hidden sm:inline">Temizle</span>
+              </button>
+              <div className="bg-slate-100/80 p-0.5 rounded-lg flex gap-0.5 border border-slate-200">
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`} title="Liste Görünümü"><List size={15} /></button>
+                <button onClick={() => setViewMode('analytics')} className={`p-1.5 rounded-md transition-all ${viewMode === 'analytics' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`} title="Analiz Raporu"><BarChart3 size={15} /></button>
+              </div>
+              <button
+                onClick={() => exportToExcel(companyRecordsBase, selectedCompany.tests)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-bold text-xs transition-all shadow-sm active:scale-95"
+                title="Excel Raporu"
+              >
+                <Download size={14} />
+                <span className="hidden sm:inline">Excel</span>
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -1534,56 +1579,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* ═══ ADIM 3: SONUÇLAR ═══ */}
       {wizardStep === 'results' && selectedCompany && companyRecordsBase.length > 0 && !isProcessing && (
         <>
-          {/* Results Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-slate-200/60 sticky top-20 z-20">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200"><Building2 size={24} /></div>
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Seçili Firma</label>
-                <h3 className="font-bold text-xl text-slate-900">{selectedCompany.name}</h3>
-                <p className="text-[10px] text-slate-400">{selectedTestCount} test seçili</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={() => { setNewOpClearFirst(false); setIsNewOperationModalOpen(true); }}
-                className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-blue-200 active:scale-95"
-              >
-                <Sparkles size={16} />
-                <span>Yeni İşlem</span>
-              </button>
-              <button
-                onClick={() => setIsClearConfirmOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/80 rounded-xl font-bold text-xs sm:text-sm transition-all active:scale-95"
-              >
-                <RotateCcw size={15} />
-                <span className="hidden sm:inline">Temizle</span>
-              </button>
-              <div className="bg-slate-100/80 p-1 rounded-xl flex gap-1 border border-slate-200">
-                 <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`} title="Liste Görünümü"><List size={18} /></button>
-                 <button onClick={() => setViewMode('analytics')} className={`p-2 rounded-lg transition-all duration-200 ${viewMode === 'analytics' ? 'bg-white shadow-sm text-blue-600 scale-105' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'}`} title="Analiz Raporu"><BarChart3 size={18} /></button>
-              </div>
-              <button onClick={() => exportToExcel(companyRecordsBase, selectedCompany.tests)} className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium text-xs sm:text-sm transition-all shadow-md shadow-blue-200 active:scale-95"><Download size={16} /><span className="hidden sm:inline">Excel Raporu</span></button>
-            </div>
-          </div>
-
           {/* Sonuç İçeriği */}
           {viewMode === 'list' ? (
             <>
-              {/* Compact action bar */}
-              <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-200 px-5 py-3">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 size={18} className="text-emerald-500" />
-                  <span className="text-sm font-bold text-slate-700">{companyRecordsBase.length} kayıt işlendi</span>
-                </div>
-                <button
-                  onClick={() => { setNewOpClearFirst(false); setIsNewOperationModalOpen(true); }}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-all border border-blue-100"
-                >
-                  <Plus size={14} /> Yeni Kayıt Ekle
-                </button>
-              </div>
-
               <RecordsTable
                 selectedCompany={selectedCompany}
                 displayedRecords={displayedRecords}
