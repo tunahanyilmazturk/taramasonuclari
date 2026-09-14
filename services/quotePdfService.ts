@@ -175,7 +175,73 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     });
   }
 
-  // ── Kalem tablosu ──
+  // ── Şartlar ve koşullar (Sayfa 1) ──
+  if (quote.terms?.length && quote.includeTerms !== false) {
+    content.push({
+      stack: [
+        { text: 'ŞARTLAR VE KOŞULLAR', style: 'blockLabel', margin: [0, 0, 0, 6] },
+        { ol: quote.terms.map(t => ({ text: t, style: 'terms' })) }
+      ],
+      margin: [0, 0, 0, 14]
+    });
+  }
+
+  // ── İmza bloğu (Sayfa 1) ──
+  content.push({
+    columns: [
+      {
+        width: '*',
+        stack: orgContact || orgTax ? [
+          { text: 'İLETİŞİM', style: 'blockLabel', margin: [0, 0, 0, 4] },
+          ...(orgContact ? [{ text: orgContact, style: 'muted' }] : []),
+          ...(orgTax ? [{ text: orgTax, style: 'muted' }] : [])
+        ] : []
+      },
+      {
+        width: 'auto',
+        stack: [
+          { text: 'Saygılarımızla,', style: 'muted', alignment: 'right' },
+          { text: org.name, style: 'signerOrg', alignment: 'right', margin: [0, 2, 0, 0] },
+          ...(signatureDataUrl
+            ? [{ image: signatureDataUrl, fit: [90, 36] as [number, number], alignment: 'right' as const, margin: [0, 6, 0, 2] as [number, number, number, number] }]
+            : []),
+          { text: org.signerName || ' ', style: 'signer', alignment: 'right', margin: [0, signatureDataUrl ? 4 : 22, 0, 0] },
+          { text: [org.signerTitle, trDate(quote.createdAt)].filter(Boolean).join(' · '), style: 'muted', alignment: 'right' }
+        ]
+      }
+    ],
+    margin: [0, 8, 0, 0]
+  });
+
+  // ── Sayfa sonu — teklif kalemleri yeni sayfada ──
+  content.push({ text: '', pageBreak: 'before' as const });
+
+  // ── Sayfa 2 başlığı ──
+  content.push({
+    columns: [
+      {
+        width: '*',
+        stack: [
+          { text: org.name.toLocaleUpperCase('tr-TR'), style: 'brand' },
+          ...(org.tagline ? [{ text: org.tagline, style: 'brandSub' }] : [])
+        ]
+      },
+      {
+        width: 'auto',
+        stack: [
+          { text: 'FİYAT TEKLİFİ', style: 'docTitle', alignment: 'right' },
+          { text: quote.quoteNumber, style: 'docNo', alignment: 'right' }
+        ]
+      }
+    ],
+    margin: [0, 0, 0, 10]
+  });
+  content.push({
+    canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: C.primary }],
+    margin: [0, 0, 0, 14]
+  });
+
+  // ── Kalem tablosu (Sayfa 2) ──
   content.push({ text: 'TEKLİF KALEMLERİ', style: 'blockLabel', margin: [0, 0, 0, 6] });
   content.push({
     table: {
@@ -206,7 +272,7 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
     margin: [0, 0, 0, 10]
   });
 
-  // ── Mali özet — sağa yaslı ──
+  // ── Mali özet — sağa yaslı (Sayfa 2) ──
   const totalsBody = [
     [
       { text: 'Ara Toplam', style: 'totKey' },
@@ -243,46 +309,6 @@ const buildQuoteDoc = async (quote: Quote, company?: Company): Promise<TDocument
       }
     ],
     margin: [0, 0, 0, 18]
-  });
-
-  // ── Şartlar ve koşullar ──
-  if (quote.terms?.length && quote.includeTerms !== false) {
-    content.push({
-      stack: [
-        { text: 'ŞARTLAR VE KOŞULLAR', style: 'blockLabel', margin: [0, 0, 0, 6] },
-        { ol: quote.terms.map(t => ({ text: t, style: 'terms' })) }
-      ],
-      margin: [0, 0, 0, 14]
-    });
-  }
-
-  // ── İç notlar — dokümana basılmaz, sadece sistemde kalır ──
-
-  // ── İmza bloğu ──
-  content.push({
-    columns: [
-      {
-        width: '*',
-        stack: orgContact || orgTax ? [
-          { text: 'İLETİŞİM', style: 'blockLabel', margin: [0, 0, 0, 4] },
-          ...(orgContact ? [{ text: orgContact, style: 'muted' }] : []),
-          ...(orgTax ? [{ text: orgTax, style: 'muted' }] : [])
-        ] : []
-      },
-      {
-        width: 'auto',
-        stack: [
-          { text: 'Saygılarımızla,', style: 'muted', alignment: 'right' },
-          { text: org.name, style: 'signerOrg', alignment: 'right', margin: [0, 2, 0, 0] },
-          ...(signatureDataUrl
-            ? [{ image: signatureDataUrl, fit: [90, 36] as [number, number], alignment: 'right' as const, margin: [0, 6, 0, 2] as [number, number, number, number] }]
-            : []),
-          { text: org.signerName || ' ', style: 'signer', alignment: 'right', margin: [0, signatureDataUrl ? 4 : 22, 0, 0] },
-          { text: [org.signerTitle, trDate(quote.createdAt)].filter(Boolean).join(' · '), style: 'muted', alignment: 'right' }
-        ]
-      }
-    ],
-    margin: [0, 8, 0, 0]
   });
 
   return {
