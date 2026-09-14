@@ -109,8 +109,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [pageMode, wizardStep, selectedCompanyId, selectedScreeningId, selectedTestIds]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState({ current: 0, total: 0, currentFile: '' });
-  const [batchErrors, setBatchErrors] = useState<string[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[] | null>(null);
+  // Gelişmiş işlem göstergesi — dosya bazında durum takibi
+  type FileProgress = { name: string; size: number; status: 'pending' | 'processing' | 'done' | 'error'; error?: string; recordId?: string };
+  const [fileProgress, setFileProgress] = useState<FileProgress[]>([]);
+  const [cancelProcessing, setCancelProcessing] = useState(false);
   const [showNoApiKeyModal, setShowNoApiKeyModal] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -629,7 +632,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     clearFilters();
     setSelectedRecordIds(new Set());
-    setBatchErrors([]);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -650,7 +652,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (!selectedCompany) return;
     onClearRecords(selectedCompany.id);
     setSelectedRecordIds(new Set());
-    setBatchErrors([]);
     clearFilters();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -680,30 +681,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
     setIsProcessing(true);
     setWizardStep('results'); // İşleniyor ekranına geç
-    setBatchErrors([]);
+    setCancelProcessing(false);
     setProcessingStatus({ current: 0, total: files.length, currentFile: '' });
+    // Dosya bazında durum takibi — önizleme + durum ikonları
+    setFileProgress(files.map(f => ({ name: f.name, size: f.size, status: 'pending' as const })));
 
     try {
-      // Ücretsiz katman rate limit'ine takılmamak için paralelliği azalt
-      const CONCURRENCY_LIMIT = 1;
+      // Paralel işleme — local provider'da 3, API'de 2 worker
+      const CONCURRENCY_LIMIT = forceLocal || provider === 'local' ? 3 : 2;
       const BATCH_FLUSH_SIZE = 5;
-      const REQUEST_DELAY_MS = 2000;
+      const REQUEST_DELAY_MS = forceLocal || provider === 'local' ? 200 : 1500;
 
       let activeRecordsBuffer: PatientRecord[] = [];
       let processedCount = 0;
       let fileIndex = 0;
 
+      const updateFileStatus = (idx: number, status: 'pending' | 'processing' | 'done' | 'error', error?: string) => {
+        setFileProgress(prev => prev.map((f, i) => i === idx ? { ...f, status, error } : f));
+      };
+
       const processNext = async (): Promise<void> => {
-          if (fileIndex >= files.length) return;
+          while (fileIndex < files.length) {
+            if (cancelProcessing) return;
 
-          const currentIndex = fileIndex++;
-          const file = files[currentIndex];
+            const currentIndex = fileIndex++;
+            const file = files[currentIndex];
 
-          setProcessingStatus(prev => ({
-              ...prev,
-              current: Math.min(processedCount + 1, files.length),
-              currentFile: file.name
-          }));
+            setProcessingStatus(prev => ({
+                ...prev,
+                current: Math.min(processedCount + 1, files.length),
+                currentFile: file.name
+            }));
+            updateFileStatus(currentIndex, 'processing');
 
           try {
               if (file.type !== 'application/pdf') {
@@ -735,13 +744,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
               };
 
               activeRecordsBuffer.push(newRecord);
+              updateFileStatus(currentIndex, 'done');
 
               // PDF'in orijinal dosyasını IndexedDB'ye sakla — sonra açılabilsin
               savePdfBlob(newRecord.id, file);
 
           } catch (err: unknown) {
               const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
-              setBatchErrors(prev => [...prev, `${file.name}: ${message}`]);
+              updateFileStatus(currentIndex, 'error', message);
               console.error(`Error processing ${file.name}:`, err);
           } finally {
               processedCount++;
@@ -756,10 +766,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
               }
           }
           // Rate limit'e takılmamak için istekler arası bekle
-          if (fileIndex < files.length) {
+          if (fileIndex < files.length && !cancelProcessing) {
               await new Promise(resolve => setTimeout(resolve, REQUEST_DELAY_MS));
           }
-          await processNext();
+          }
       };
 
       const workers = [];
@@ -779,7 +789,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     } catch (err: unknown) {
       console.error("Batch processing error:", err);
       const message = err instanceof Error ? err.message : 'Bilinmeyen hata';
-      setBatchErrors(prev => [...prev, `İşlem hatası: ${message}`]);
+      setFileProgress(prev => prev.map((f, i) => i === 0 ? { ...f, status: 'error', error: `İşlem hatası: ${message}` } : f));
     } finally {
       setIsProcessing(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -795,7 +805,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleOpenPdf = async (record: PatientRecord) => {
       const ok = await openPdfInNewTab(record.id, record.fileName);
       if (!ok) {
-          setBatchErrors(prev => [...prev, `${record.patientName}: PDF dosyası bulunamadı (sadece işlenen metin saklanmış olabilir).`]);
+          console.warn(`${record.patientName}: PDF dosyası bulunamadı (sadece işlenen metin saklanmış olabilir).`);
       }
   };
 
@@ -1545,33 +1555,85 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* ═══ İŞLENİYOR ═══ */}
       {isProcessing && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="bg-white rounded-3xl border border-slate-200 p-8 max-w-2xl mx-auto text-center">
-            <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-5">
-              <Loader2 size={32} className="animate-spin" />
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 max-w-3xl mx-auto">
+            {/* Başlık + spinner */}
+            <div className="flex items-center gap-4 mb-5">
+              <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
+                <Loader2 size={28} className="animate-spin" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-slate-900">PDF'ler İşleniyor</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {processingStatus.currentFile && <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">{processingStatus.currentFile}</span>}
+                </p>
+              </div>
+              {/* Özet rozetleri */}
+              <div className="flex items-center gap-2 shrink-0">
+                {fileProgress.filter(f => f.status === 'done').length > 0 && (
+                  <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold border border-emerald-100">
+                    <CheckCircle2 size={13} /> {fileProgress.filter(f => f.status === 'done').length}
+                  </span>
+                )}
+                {fileProgress.filter(f => f.status === 'error').length > 0 && (
+                  <span className="flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-600 rounded-lg text-xs font-bold border border-red-100">
+                    <AlertTriangle size={13} /> {fileProgress.filter(f => f.status === 'error').length}
+                  </span>
+                )}
+                {fileProgress.filter(f => f.status === 'processing').length > 0 && (
+                  <span className="flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-100">
+                    <Loader2 size={13} className="animate-spin" /> {fileProgress.filter(f => f.status === 'processing').length}
+                  </span>
+                )}
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">PDF'ler İşleniyor</h3>
-            <p className="text-sm text-slate-500 mb-6">
-              {processingStatus.currentFile && <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{processingStatus.currentFile}</span>}
-            </p>
-            <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden mb-3">
+
+            {/* İlerleme çubuğu */}
+            <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden mb-2">
               <div
                 className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${processingStatus.total > 0 ? (processingStatus.current / processingStatus.total) * 100 : 0}%` }}
               />
             </div>
-            <p className="text-xs text-slate-400 font-medium">{processingStatus.current} / {processingStatus.total} dosya işlendi</p>
-            {batchErrors.length > 0 && (
-              <div className="mt-4 p-3 bg-red-50 rounded-xl text-left">
-                <p className="text-xs font-bold text-red-600 mb-1">Hatalar:</p>
-                {batchErrors.map((err, i) => <p key={i} className="text-xs text-red-500">{err}</p>)}
-              </div>
-            )}
-            <button
-              onClick={() => { setIsProcessing(false); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-              className="mt-6 px-4 py-2 text-xs font-bold text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-lg transition-all"
-            >
-              İptal Et
-            </button>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-xs text-slate-400 font-medium">{processingStatus.current} / {processingStatus.total} dosya işlendi</p>
+              <p className="text-xs font-bold text-blue-600">
+                %{processingStatus.total > 0 ? Math.round((processingStatus.current / processingStatus.total) * 100) : 0}
+              </p>
+            </div>
+
+            {/* Dosya listesi — durum ikonları + boyut */}
+            <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
+              {fileProgress.map((f, i) => (
+                <div key={i} className={`flex items-center gap-3 px-4 py-2.5 ${i % 2 ? 'bg-slate-50/50' : 'bg-white'} ${f.status === 'processing' ? 'bg-blue-50/50' : ''}`}>
+                  {/* Durum ikonu */}
+                  <div className="shrink-0">
+                    {f.status === 'pending' && <div className="w-5 h-5 rounded-full border-2 border-slate-200" />}
+                    {f.status === 'processing' && <Loader2 size={18} className="text-blue-500 animate-spin" />}
+                    {f.status === 'done' && <CheckCircle2 size={18} className="text-emerald-500" />}
+                    {f.status === 'error' && <AlertTriangle size={18} className="text-red-500" />}
+                  </div>
+                  {/* Dosya adı + hata */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-medium truncate ${f.status === 'error' ? 'text-red-600' : 'text-slate-700'}`}>{f.name}</p>
+                    {f.error && <p className="text-[10px] text-red-400 truncate">{f.error}</p>}
+                  </div>
+                  {/* Boyut */}
+                  <span className="text-[10px] text-slate-400 shrink-0">
+                    {f.size < 1024 * 1024 ? `${Math.round(f.size / 1024)} KB` : `${(f.size / (1024 * 1024)).toFixed(1)} MB`}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* İptal butonu */}
+            <div className="flex justify-center mt-5">
+              <button
+                onClick={() => { setCancelProcessing(true); setIsProcessing(false); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-lg transition-all"
+              >
+                İptal Et
+              </button>
+            </div>
           </div>
         </div>
       )}
